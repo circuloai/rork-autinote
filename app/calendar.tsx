@@ -1,13 +1,11 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { useState } from 'react';
 
 export default function CalendarScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeChildLogs } = useApp();
   

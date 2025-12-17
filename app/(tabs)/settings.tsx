@@ -1,11 +1,10 @@
+import React, { useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { ChevronRight, User, Bell, Palette, BookOpen, TrendingUp, Bot, Lock, BookMarked, Info, LogOut, TestTube, Users } from 'lucide-react-native';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMemo } from 'react';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import React from "react";
 
 type SettingsItem = {
   icon: React.ReactNode;

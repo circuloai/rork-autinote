@@ -21,7 +21,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   const profileQuery = useQuery({
-    queryKey: ['userProfile', user?.id],
+    queryKey: ['userProfile', user?.id, !!user],
     queryFn: async () => {
       if (!user) {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
@@ -75,7 +75,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
 
   const logsQuery = useQuery({
-    queryKey: ['logEntries', user?.id, profileQuery.data?.children],
+    queryKey: ['logEntries', user?.id, !!user, profileQuery.data?.children],
     queryFn: async () => {
       if (!user || !profileQuery.data?.children) {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.LOG_ENTRIES);
@@ -116,7 +116,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
 
   const preferencesQuery = useQuery({
-    queryKey: ['preferences', user?.id],
+    queryKey: ['preferences', user?.id, !!user],
     queryFn: async () => {
       if (!user) {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
@@ -168,7 +168,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
 
   const sharedAccessQuery = useQuery({
-    queryKey: ['sharedAccess', user?.id, profileQuery.data?.id],
+    queryKey: ['sharedAccess', user?.id, !!user, profileQuery.data?.id],
     queryFn: async () => {
       if (!user || !profileQuery.data?.id) return [];
 
@@ -208,7 +208,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
 
   const therapistNotesQuery = useQuery({
-    queryKey: ['therapistNotes', user?.id, profileQuery.data?.children],
+    queryKey: ['therapistNotes', user?.id, !!user, profileQuery.data?.children],
     queryFn: async () => {
       if (!user || !profileQuery.data?.children) return [];
 
