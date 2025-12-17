@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { TrendingUp, Calendar as CalendarIcon, Flame, Bell, Clock, AlertCircle, Settings as SettingsIcon } from 'lucide-react-native';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { GlassView } from 'expo-glass-effect';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo, useCallback } from 'react';
 import { getColors } from '@/constants/colors';
@@ -216,7 +217,8 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {hasReminders && (
-          <View style={[styles.remindersCard, { backgroundColor: Colors.surface }]}>
+          Platform.OS === 'ios' ? (
+            <GlassView style={styles.remindersCard} glassEffectStyle="regular">
             <View style={styles.reminderHeader}>
               <View style={styles.reminderTitleRow}>
                 <Bell size={20} color={Colors.primary} />
@@ -270,11 +272,69 @@ export default function HomeScreen() {
             {reminders.upcoming.length === 0 && reminders.missed.length === 0 && (
               <Text style={styles.noReminders}>No reminders set for today</Text>
             )}
-          </View>
+            </GlassView>
+          ) : (
+            <View style={[styles.remindersCard, { backgroundColor: Colors.surface }]}>
+              <View style={styles.reminderHeader}>
+                <View style={styles.reminderTitleRow}>
+                  <Bell size={20} color={Colors.primary} />
+                  <Text style={styles.cardTitle}>Reminders</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => router.push('/(tabs)/settings' as any)}
+                  style={styles.settingsButton}
+                >
+                  <SettingsIcon size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {reminders.missed.length > 0 && (
+                <View style={styles.missedSection}>
+                  <View style={styles.missedHeader}>
+                    <AlertCircle size={16} color="#FF9800" />
+                    <Text style={styles.missedTitle}>Missed</Text>
+                  </View>
+                  {reminders.missed.map((reminder) => (
+                    <View key={reminder.id} style={[styles.reminderItem, styles.missedReminderItem]}>
+                      <Clock size={16} color="#FF9800" />
+                      <View style={styles.reminderContent}>
+                        <Text style={[styles.reminderLabel, styles.missedLabel]}>{reminder.label}</Text>
+                        <Text style={[styles.reminderTime, styles.missedTime]}>{reminder.time}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {reminders.upcoming.length > 0 && (
+                <View style={styles.upcomingSection}>
+                  {reminders.missed.length > 0 && <View style={styles.reminderDivider} />}
+                  <View style={styles.upcomingHeader}>
+                    <Clock size={16} color={Colors.primary} />
+                    <Text style={styles.upcomingTitle}>Upcoming</Text>
+                  </View>
+                  {reminders.upcoming.map((reminder) => (
+                    <View key={reminder.id} style={styles.reminderItem}>
+                      <View style={[styles.reminderDot, { backgroundColor: Colors.primary }]} />
+                      <View style={styles.reminderContent}>
+                        <Text style={styles.reminderLabel}>{reminder.label}</Text>
+                        <Text style={styles.reminderTime}>{reminder.time}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {reminders.upcoming.length === 0 && reminders.missed.length === 0 && (
+                <Text style={styles.noReminders}>No reminders set for today</Text>
+              )}
+            </View>
+          )
         )}
 
         {recentLog && (
-          <View style={[styles.recentMoodCard, { backgroundColor: Colors.surface }]}>
+          Platform.OS === 'ios' ? (
+            <GlassView style={styles.recentMoodCard} glassEffectStyle="regular">
             <Text style={styles.cardTitle}>Recent Mood</Text>
             <View style={styles.moodDisplay}>
               <Text style={styles.moodEmoji}>{getMoodEmoji(recentLog)}</Text>
@@ -287,7 +347,23 @@ export default function HomeScreen() {
                 </Text>
               </View>
             </View>
-          </View>
+            </GlassView>
+          ) : (
+            <View style={[styles.recentMoodCard, { backgroundColor: Colors.surface }]}>
+              <Text style={styles.cardTitle}>Recent Mood</Text>
+              <View style={styles.moodDisplay}>
+                <Text style={styles.moodEmoji}>{getMoodEmoji(recentLog)}</Text>
+                <View>
+                  <Text style={styles.moodLabel}>
+                    {getMoodLabel(recentLog)}
+                  </Text>
+                  <Text style={styles.moodDate}>
+                    {new Date(recentLog.date).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )
         )}
 
         <View style={styles.quickActions}>
@@ -328,23 +404,51 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={[styles.secondaryAction, { backgroundColor: Colors.surface }]}
-              onPress={() => router.push('/calendar' as any)}
-              activeOpacity={0.8}
-            >
-              <CalendarIcon size={20} color={Colors.primary} />
-              <Text style={[styles.secondaryActionText, { color: Colors.primary }]}>Calendar</Text>
-            </TouchableOpacity>
+            {Platform.OS === 'ios' ? (
+              <>
+                <TouchableOpacity
+                  style={styles.secondaryAction}
+                  onPress={() => router.push('/calendar' as any)}
+                  activeOpacity={0.8}
+                >
+                  <GlassView style={styles.glassSecondaryAction} glassEffectStyle="clear">
+                    <CalendarIcon size={20} color={Colors.primary} />
+                    <Text style={[styles.secondaryActionText, { color: Colors.primary }]}>Calendar</Text>
+                  </GlassView>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.secondaryAction, { backgroundColor: Colors.surface }]}
-              onPress={() => router.push('/(tabs)/insights' as any)}
-              activeOpacity={0.8}
-            >
-              <TrendingUp size={20} color={Colors.primary} />
-              <Text style={[styles.secondaryActionText, { color: Colors.primary }]}>Insights</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.secondaryAction}
+                  onPress={() => router.push('/(tabs)/insights' as any)}
+                  activeOpacity={0.8}
+                >
+                  <GlassView style={styles.glassSecondaryAction} glassEffectStyle="clear">
+                    <TrendingUp size={20} color={Colors.primary} />
+                    <Text style={[styles.secondaryActionText, { color: Colors.primary }]}>Insights</Text>
+                  </GlassView>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.secondaryAction, { backgroundColor: Colors.surface }]}
+                  onPress={() => router.push('/calendar' as any)}
+                  activeOpacity={0.8}
+                >
+                  <CalendarIcon size={20} color={Colors.primary} />
+                  <Text style={[styles.secondaryActionText, { color: Colors.primary }]}>Calendar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.secondaryAction, { backgroundColor: Colors.surface }]}
+                  onPress={() => router.push('/(tabs)/insights' as any)}
+                  activeOpacity={0.8}
+                >
+                  <TrendingUp size={20} color={Colors.primary} />
+                  <Text style={[styles.secondaryActionText, { color: Colors.primary }]}>Insights</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
@@ -513,10 +617,11 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     fontStyle: 'italic' as const,
   },
   recentMoodCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : Colors.surface,
     padding: 20,
     borderRadius: 16,
     marginBottom: 24,
+    overflow: 'hidden',
   },
   cardTitle: {
     fontSize: 14,
@@ -622,8 +727,18 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    padding: Platform.OS === 'ios' ? 0 : 16,
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : Colors.surface,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  glassSecondaryAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     padding: 16,
-    backgroundColor: Colors.surface,
     borderRadius: 12,
   },
   secondaryActionText: {
@@ -648,10 +763,11 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     lineHeight: 24,
   },
   remindersCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : Colors.surface,
     padding: 20,
     borderRadius: 16,
     marginBottom: 20,
+    overflow: 'hidden',
   },
   reminderHeader: {
     flexDirection: 'row',
