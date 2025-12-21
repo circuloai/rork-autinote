@@ -23,53 +23,58 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const profileQuery = useQuery({
     queryKey: ['userProfile', user?.id, !!user],
     queryFn: async () => {
-      if (!user) {
-        const stored = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
-        return stored ? JSON.parse(stored) as UserProfile : null;
-      }
+      try {
+        if (!user) {
+          const stored = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+          return stored ? JSON.parse(stored) as UserProfile : null;
+        }
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
 
-      if (error || !profile) {
-        console.log('Profile fetch error:', error);
+        if (error || !profile) {
+          console.log('Profile fetch error:', error);
+          return null;
+        }
+
+        const { data: children } = await supabase
+          .from('children')
+          .select('*')
+          .eq('profile_id', profile.id);
+
+        return {
+          id: profile.id,
+          role: profile.role as any,
+          caregiverName: profile.caregiver_name || undefined,
+          caregiverEmail: profile.caregiver_email || undefined,
+          caregiverPhone: profile.caregiver_phone || undefined,
+          therapistPhone: profile.therapist_phone || undefined,
+          children: (children || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            age: c.age,
+            diagnosis: c.diagnosis || undefined,
+            gradeLevel: c.grade_level || undefined,
+            schoolName: c.school_name || undefined,
+            height: c.height || undefined,
+            weight: c.weight || undefined,
+            commonTriggers: c.common_triggers || [],
+            strengths: c.strengths || undefined,
+            interests: c.interests || undefined,
+            avatar: c.avatar || undefined,
+            createdAt: c.created_at,
+          })),
+          activeChildId: profile.active_child_id || null,
+          createdAt: profile.created_at,
+          isExploreMode: profile.is_explore_mode || false,
+        };
+      } catch (error) {
+        console.error('Profile query error:', error);
         return null;
       }
-
-      const { data: children } = await supabase
-        .from('children')
-        .select('*')
-        .eq('profile_id', profile.id);
-
-      return {
-        id: profile.id,
-        role: profile.role as any,
-        caregiverName: profile.caregiver_name || undefined,
-        caregiverEmail: profile.caregiver_email || undefined,
-        caregiverPhone: profile.caregiver_phone || undefined,
-        therapistPhone: profile.therapist_phone || undefined,
-        children: (children || []).map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          age: c.age,
-          diagnosis: c.diagnosis || undefined,
-          gradeLevel: c.grade_level || undefined,
-          schoolName: c.school_name || undefined,
-          height: c.height || undefined,
-          weight: c.weight || undefined,
-          commonTriggers: c.common_triggers || [],
-          strengths: c.strengths || undefined,
-          interests: c.interests || undefined,
-          avatar: c.avatar || undefined,
-          createdAt: c.created_at,
-        })),
-        activeChildId: profile.active_child_id || null,
-        createdAt: profile.created_at,
-        isExploreMode: profile.is_explore_mode || false,
-      };
     },
     enabled: authIsAuthenticated || !user,
   });
@@ -77,40 +82,45 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const logsQuery = useQuery({
     queryKey: ['logEntries', user?.id, !!user, profileQuery.data?.children],
     queryFn: async () => {
-      if (!user || !profileQuery.data?.children) {
-        const stored = await AsyncStorage.getItem(STORAGE_KEYS.LOG_ENTRIES);
-        return stored ? JSON.parse(stored) as LogEntry[] : [];
-      }
+      try {
+        if (!user || !profileQuery.data?.children) {
+          const stored = await AsyncStorage.getItem(STORAGE_KEYS.LOG_ENTRIES);
+          return stored ? JSON.parse(stored) as LogEntry[] : [];
+        }
 
-      const childIds = profileQuery.data.children.map(c => c.id);
-      if (childIds.length === 0) return [];
+        const childIds = profileQuery.data.children.map(c => c.id);
+        if (childIds.length === 0) return [];
 
-      const { data, error } = await supabase
-        .from('log_entries')
-        .select('*')
-        .in('child_id', childIds);
+        const { data, error } = await supabase
+          .from('log_entries')
+          .select('*')
+          .in('child_id', childIds);
 
-      if (error) {
-        console.log('Logs fetch error:', error);
+        if (error) {
+          console.log('Logs fetch error:', error);
+          return [];
+        }
+
+        return (data || []).map((log: any) => ({
+          id: log.id,
+          childId: log.child_id,
+          date: log.date,
+          moodRating: log.mood_rating as any,
+          positiveNotes: log.positive_notes || undefined,
+          challengeNotes: log.challenge_notes || undefined,
+          moodTags: log.mood_tags || [],
+          type: log.type as any,
+          behaviors: log.behaviors || undefined,
+          sleepHours: log.sleep_hours || undefined,
+          triggers: log.triggers || undefined,
+          voiceNotes: log.voice_notes || undefined,
+          photos: log.photos || undefined,
+          createdAt: log.created_at,
+        }));
+      } catch (error) {
+        console.error('Logs query error:', error);
         return [];
       }
-
-      return (data || []).map((log: any) => ({
-        id: log.id,
-        childId: log.child_id,
-        date: log.date,
-        moodRating: log.mood_rating as any,
-        positiveNotes: log.positive_notes || undefined,
-        challengeNotes: log.challenge_notes || undefined,
-        moodTags: log.mood_tags || [],
-        type: log.type as any,
-        behaviors: log.behaviors || undefined,
-        sleepHours: log.sleep_hours || undefined,
-        triggers: log.triggers || undefined,
-        voiceNotes: log.voice_notes || undefined,
-        photos: log.photos || undefined,
-        createdAt: log.created_at,
-      }));
     },
     enabled: !!profileQuery.data?.children,
   });
@@ -118,24 +128,46 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const preferencesQuery = useQuery({
     queryKey: ['preferences', user?.id, !!user],
     queryFn: async () => {
-      if (!user) {
-        const stored = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
-        return stored ? JSON.parse(stored) as Preferences : {
-          theme: 'light' as const,
-          colorTheme: 'mint' as const,
-          fontSize: 'medium' as const,
-          textToSpeech: false,
-          reminders: false,
+      try {
+        if (!user) {
+          const stored = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
+          return stored ? JSON.parse(stored) as Preferences : {
+            theme: 'light' as const,
+            colorTheme: 'mint' as const,
+            fontSize: 'medium' as const,
+            textToSpeech: false,
+            reminders: false,
+          };
+        }
+
+        const { data, error } = await supabase
+          .from('preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error || !data) {
+          return {
+            theme: 'light' as const,
+            colorTheme: 'mint' as const,
+            fontSize: 'medium' as const,
+            textToSpeech: false,
+            reminders: false,
+          };
+        }
+
+        return {
+          theme: data.theme as any,
+          colorTheme: data.color_theme as any,
+          fontSize: data.font_size as any,
+          textToSpeech: data.text_to_speech,
+          reminders: data.reminders,
+          reminderTime: data.reminder_time || undefined,
+          quickReminders: data.quick_reminders || undefined,
+          customReminders: data.custom_reminders || undefined,
         };
-      }
-
-      const { data, error } = await supabase
-        .from('preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error || !data) {
+      } catch (error) {
+        console.error('Preferences query error:', error);
         return {
           theme: 'light' as const,
           colorTheme: 'mint' as const,
@@ -144,17 +176,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
           reminders: false,
         };
       }
-
-      return {
-        theme: data.theme as any,
-        colorTheme: data.color_theme as any,
-        fontSize: data.font_size as any,
-        textToSpeech: data.text_to_speech,
-        reminders: data.reminders,
-        reminderTime: data.reminder_time || undefined,
-        quickReminders: data.quick_reminders || undefined,
-        customReminders: data.custom_reminders || undefined,
-      };
     },
     enabled: authIsAuthenticated || !user,
   });
