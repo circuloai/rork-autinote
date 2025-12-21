@@ -15,7 +15,7 @@ const getBaseUrl = () => {
 
 let trpcClientInstance: ReturnType<typeof trpc.createClient> | null = null;
 
-function createTRPCClient() {
+export function getTRPCClient() {
   if (trpcClientInstance) return trpcClientInstance;
   
   try {
@@ -42,4 +42,4 @@ function createTRPCClient() {
   }
 }
 
-export const trpcClient = createTRPCClient();
+export const trpcClient = getTRPCClient();
