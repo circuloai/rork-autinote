@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Check, Sparkles } from 'lucide-react-native';
-import Slider from '@react-native-community/slider';
+import CustomSlider from '@/components/CustomSlider';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import type { DailyMoodRating, MoodTag, DailyLogEntry } from '@/types';
@@ -353,7 +353,7 @@ ${predefinedChallengeSuggestions.join('\n')}`;
           <Text style={styles.sectionTitle}>Sleep</Text>
           <View style={styles.sliderContainer}>
             <Text style={styles.sliderLabel}>{sleepHours} hours</Text>
-            <Slider
+            <CustomSlider
               style={styles.slider}
               minimumValue={1}
               maximumValue={12}

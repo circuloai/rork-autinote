@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Check, ArrowLeft } from 'lucide-react-native';
-import Slider from '@react-native-community/slider';
+import CustomSlider from '@/components/CustomSlider';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import type { MeltdownMood, MeltdownTrigger, MeltdownSeverity, MeltdownLogEntry } from '@/types';
@@ -264,7 +264,7 @@ export default function MeltdownLogScreen() {
             <Text style={styles.stepSubtitle}>How long did it last?</Text>
             <View style={styles.sliderContainer}>
               <Text style={styles.sliderLabel}>{durationMinutes} minutes</Text>
-              <Slider
+              <CustomSlider
                 style={styles.slider}
                 minimumValue={1}
                 maximumValue={60}
