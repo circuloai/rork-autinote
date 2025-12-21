@@ -6,6 +6,7 @@
     "start": "bunx rork start -p i3iytomcfmnnh5v3rdwxs --tunnel",
     "start-web": "bunx rork start -p i3iytomcfmnnh5v3rdwxs --web --tunnel",
     "start-web-dev": "DEBUG=expo* bunx rork start -p i3iytomcfmnnh5v3rdwxs --web --tunnel",
+    "postinstall": "node scripts/patch-slider-podspec.mjs",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -14,7 +15,7 @@
     "@hono/trpc-server": "^0.4.0",
     "@nkzw/create-context-hook": "^1.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-native-community/slider": "5.0.1",
+    "@react-native-community/slider": "^5.1.1",
     "@rork-ai/toolkit-sdk": "^0.2.47",
     "@stardazed/streams-text-encoding": "^1.0.2",
     "@supabase/supabase-js": "^2.86.0",
