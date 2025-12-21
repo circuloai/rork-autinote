@@ -9,26 +9,45 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+    let subscription: any = null;
+
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
         setSession(session);
         setUser(session?.user ?? null);
-        setIsLoading(false);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error('Auth session error:', error);
         setSession(null);
         setUser(null);
+      } finally {
         setIsLoading(false);
-      });
+      }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+      try {
+        const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setIsLoading(false);
+        });
+        subscription = data.subscription;
+      } catch (error) {
+        console.error('Auth state change listener error:', error);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    initAuth();
+
+    return () => {
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          console.error('Error unsubscribing from auth:', error);
+        }
+      }
+    };
   }, []);
 
   const signUp = async (email: string, password: string): Promise<{ error: AuthError | null }> => {

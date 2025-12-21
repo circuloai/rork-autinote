@@ -9,17 +9,37 @@ const getBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
     return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
   }
-
-  throw new Error(
-    "No base url found, please set EXPO_PUBLIC_RORK_API_BASE_URL"
-  );
+  console.warn('EXPO_PUBLIC_RORK_API_BASE_URL not set, using fallback');
+  return 'http://localhost:3000';
 };
 
-export const trpcClient = trpc.createClient({
-  links: [
-    httpLink({
-      url: `${getBaseUrl()}/api/trpc`,
-      transformer: superjson,
-    }),
-  ],
-});
+let trpcClientInstance: ReturnType<typeof trpc.createClient> | null = null;
+
+function createTRPCClient() {
+  if (trpcClientInstance) return trpcClientInstance;
+  
+  try {
+    trpcClientInstance = trpc.createClient({
+      links: [
+        httpLink({
+          url: `${getBaseUrl()}/api/trpc`,
+          transformer: superjson,
+        }),
+      ],
+    });
+    return trpcClientInstance;
+  } catch (error) {
+    console.error('Failed to create tRPC client:', error);
+    trpcClientInstance = trpc.createClient({
+      links: [
+        httpLink({
+          url: 'http://localhost:3000/api/trpc',
+          transformer: superjson,
+        }),
+      ],
+    });
+    return trpcClientInstance;
+  }
+}
+
+export const trpcClient = createTRPCClient();

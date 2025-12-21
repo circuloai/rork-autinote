@@ -3,13 +3,27 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { LogBox, View, ActivityIndicator, StyleSheet } from "react-native";
+import { LogBox, View, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { AppProvider } from "@/contexts/AppContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { trpc, trpcClient } from "@/lib/trpc";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-SplashScreen.preventAutoHideAsync();
+if (typeof ErrorUtils !== 'undefined') {
+  const originalHandler = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    console.error('Global error handler:', error, 'isFatal:', isFatal);
+    if (originalHandler) {
+      originalHandler(error, isFatal);
+    }
+  });
+}
+
+try {
+  SplashScreen.preventAutoHideAsync();
+} catch (error) {
+  console.error('Error preventing splash screen auto hide:', error);
+}
 
 LogBox.ignoreLogs([
   'source.uri',
@@ -41,6 +55,7 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     async function prepare() {
@@ -49,9 +64,14 @@ export default function RootLayout() {
         setAppIsReady(true);
       } catch (e) {
         console.error('Error during app initialization:', e);
+        setHasError(true);
         setAppIsReady(true);
       } finally {
-        await SplashScreen.hideAsync();
+        try {
+          await SplashScreen.hideAsync();
+        } catch (error) {
+          console.error('Error hiding splash screen:', error);
+        }
       }
     }
 
@@ -62,6 +82,15 @@ export default function RootLayout() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Failed to initialize app</Text>
+        <Text style={styles.errorSubtext}>Please restart the app</Text>
       </View>
     );
   }
@@ -89,5 +118,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ef4444',
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#666',
   },
 });
