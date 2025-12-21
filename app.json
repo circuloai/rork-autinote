@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "Autinote",
+    "owner":"gauravkales-organization",
     "slug": "Autinote",
     "version": "1.0.2",
     "orientation": "portrait",
