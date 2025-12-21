@@ -2,12 +2,12 @@
   "expo": {
     "name": "Autinote",
     "slug": "Autinote",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rork-app",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
