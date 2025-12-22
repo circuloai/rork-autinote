@@ -170,8 +170,19 @@ export default function ChatScreen() {
   const handleSend = useCallback(() => {
     if (!input.trim()) return;
     
+    const toolkitUrl = process.env.EXPO_PUBLIC_TOOLKIT_URL;
     console.log('Sending message:', input);
-    console.log('EXPO_PUBLIC_TOOLKIT_URL:', process.env.EXPO_PUBLIC_TOOLKIT_URL);
+    console.log('EXPO_PUBLIC_TOOLKIT_URL:', toolkitUrl);
+    
+    if (!toolkitUrl) {
+      console.error('EXPO_PUBLIC_TOOLKIT_URL is not set!');
+      Alert.alert(
+        'Configuration Error',
+        'AI chat is not configured properly. Please contact support.'
+      );
+      return;
+    }
+    
     sendMessage(input);
     setInput('');
   }, [input, sendMessage]);
@@ -310,9 +321,16 @@ export default function ChatScreen() {
           {error && (
             <View style={styles.errorBubble}>
               <Text style={styles.errorText}>Something went wrong. Please try again.</Text>
+              <Text style={[styles.errorText, { fontSize: 12, marginTop: 8, opacity: 0.8 }]}>
+                {typeof error === 'object' && error !== null && 'message' in error 
+                  ? String(error.message)
+                  : typeof error === 'string' 
+                  ? error 
+                  : 'Unknown error occurred'}
+              </Text>
               {__DEV__ && (
-                <Text style={[styles.errorText, { fontSize: 12, marginTop: 8 }]}>
-                  Error: {JSON.stringify(error, null, 2)}
+                <Text style={[styles.errorText, { fontSize: 11, marginTop: 4, fontFamily: 'monospace' }]}>
+                  Debug: {JSON.stringify(error, null, 2)}
                 </Text>
               )}
             </View>
