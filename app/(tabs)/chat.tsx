@@ -161,9 +161,17 @@ export default function ChatScreen() {
     }
   }, [messages.length]);
 
+  useEffect(() => {
+    if (error) {
+      console.error('Chat error:', error);
+    }
+  }, [error]);
+
   const handleSend = useCallback(() => {
     if (!input.trim()) return;
     
+    console.log('Sending message:', input);
+    console.log('EXPO_PUBLIC_TOOLKIT_URL:', process.env.EXPO_PUBLIC_TOOLKIT_URL);
     sendMessage(input);
     setInput('');
   }, [input, sendMessage]);
@@ -302,6 +310,11 @@ export default function ChatScreen() {
           {error && (
             <View style={styles.errorBubble}>
               <Text style={styles.errorText}>Something went wrong. Please try again.</Text>
+              {__DEV__ && (
+                <Text style={[styles.errorText, { fontSize: 12, marginTop: 8 }]}>
+                  Error: {JSON.stringify(error, null, 2)}
+                </Text>
+              )}
             </View>
           )}
 
