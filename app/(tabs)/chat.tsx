@@ -191,16 +191,34 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (error) {
-      console.error('Chat error:', error);
+      console.error('=== Chat Error ===');
+      console.error('Error type:', typeof error);
+      console.error('Error:', error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+      if (typeof error === 'object' && error !== null) {
+        console.error('Error keys:', Object.keys(error));
+        console.error('Error JSON:', JSON.stringify(error, null, 2));
+      }
+      console.error('==================');
     }
   }, [error]);
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     if (!input.trim()) return;
     
     const toolkitUrl = process.env.EXPO_PUBLIC_TOOLKIT_URL;
-    console.log('Sending message:', input);
+    const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+    const teamId = process.env.EXPO_PUBLIC_TEAM_ID;
+    
+    console.log('=== Chat Debug Info ===');
+    console.log('Input:', input);
     console.log('EXPO_PUBLIC_TOOLKIT_URL:', toolkitUrl);
+    console.log('EXPO_PUBLIC_PROJECT_ID:', projectId);
+    console.log('EXPO_PUBLIC_TEAM_ID:', teamId);
+    console.log('Active Child:', activeChild?.id);
+    console.log('Message count:', messages.length);
+    console.log('=====================');
     
     if (!toolkitUrl) {
       console.error('EXPO_PUBLIC_TOOLKIT_URL is not set!');
@@ -211,9 +229,14 @@ export default function ChatScreen() {
       return;
     }
     
-    sendMessage(input);
-    setInput('');
-  }, [input, sendMessage]);
+    try {
+      await sendMessage(input);
+      setInput('');
+    } catch (err) {
+      console.error('Send message error:', err);
+      console.error('Error details:', JSON.stringify(err, null, 2));
+    }
+  }, [input, sendMessage, activeChild?.id, messages.length]);
 
   const handleClearHistory = useCallback(() => {
     Alert.alert(
