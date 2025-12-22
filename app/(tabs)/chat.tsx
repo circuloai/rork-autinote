@@ -21,15 +21,20 @@ export default function ChatScreen() {
         description: 'Get child profile info including diagnosis, triggers, age, school',
         zodSchema: z.object({}),
         execute: () => {
-          if (!activeChild) return JSON.stringify({ error: 'No profile' });
-          return JSON.stringify({
-            name: activeChild.name,
-            age: activeChild.age,
-            diagnosis: activeChild.diagnosis,
-            school: activeChild.schoolName,
-            grade: activeChild.gradeLevel,
-            triggers: activeChild.commonTriggers,
-          });
+          try {
+            if (!activeChild) return JSON.stringify({ error: 'No profile' });
+            return JSON.stringify({
+              name: activeChild.name || 'Unknown',
+              age: activeChild.age || 0,
+              diagnosis: activeChild.diagnosis || 'Not specified',
+              school: activeChild.schoolName || 'Not specified',
+              grade: activeChild.gradeLevel || 'Not specified',
+              triggers: activeChild.commonTriggers || [],
+            });
+          } catch (error) {
+            console.error('getChildProfile error:', error);
+            return JSON.stringify({ error: 'Failed to get profile' });
+          }
         },
       }),
       getLogsSummary: createRorkTool({
@@ -38,34 +43,43 @@ export default function ChatScreen() {
           days: z.number().describe('Number of recent days to summarize').optional(),
         }),
         execute: (input) => {
-          const days = input.days || 30;
-          const recentLogs = activeChildLogs.slice(-days);
-          
-          const moodCounts = recentLogs.reduce((acc, log) => {
-            acc[log.moodRating] = (acc[log.moodRating] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>);
-          
-          const tagCounts = recentLogs.reduce((acc, log) => {
-            (log.moodTags || []).forEach((tag: string) => {
-              acc[tag] = (acc[tag] || 0) + 1;
+          try {
+            const days = input.days || 30;
+            const recentLogs = (activeChildLogs || []).slice(-days);
+            
+            const moodCounts = recentLogs.reduce((acc, log) => {
+              if (log?.moodRating) {
+                acc[log.moodRating] = (acc[log.moodRating] || 0) + 1;
+              }
+              return acc;
+            }, {} as Record<string, number>);
+            
+            const tagCounts = recentLogs.reduce((acc, log) => {
+              (log?.moodTags || []).forEach((tag: string) => {
+                if (tag) {
+                  acc[tag] = (acc[tag] || 0) + 1;
+                }
+              });
+              return acc;
+            }, {} as Record<string, number>);
+            
+            return JSON.stringify({
+              period: `Last ${days} days`,
+              totalLogs: recentLogs.length,
+              moodDistribution: moodCounts,
+              commonTags: tagCounts,
+              recentEntries: recentLogs.slice(-7).map(l => ({
+                date: l?.date || 'Unknown',
+                mood: l?.moodRating || 'Unknown',
+                tags: l?.moodTags || [],
+                positiveNotes: l?.positiveNotes || '',
+                challengeNotes: l?.challengeNotes || '',
+              })),
             });
-            return acc;
-          }, {} as Record<string, number>);
-          
-          return JSON.stringify({
-            period: `Last ${days} days`,
-            totalLogs: recentLogs.length,
-            moodDistribution: moodCounts,
-            commonTags: tagCounts,
-            recentEntries: recentLogs.slice(-7).map(l => ({
-              date: l.date,
-              mood: l.moodRating,
-              tags: l.moodTags || [],
-              positiveNotes: l.positiveNotes,
-              challengeNotes: l.challengeNotes,
-            })),
-          });
+          } catch (error) {
+            console.error('getLogsSummary error:', error);
+            return JSON.stringify({ error: 'Failed to get logs summary' });
+          }
         },
       }),
       getDetailedLog: createRorkTool({
@@ -74,20 +88,25 @@ export default function ChatScreen() {
           date: z.string().describe('Date of the log entry in ISO format (YYYY-MM-DD)'),
         }),
         execute: (input) => {
-          const log = activeChildLogs.find(l => l.date === input.date);
-          if (!log) {
-            return JSON.stringify({ error: 'No log found for this date' });
+          try {
+            const log = (activeChildLogs || []).find(l => l?.date === input.date);
+            if (!log) {
+              return JSON.stringify({ error: 'No log found for this date' });
+            }
+            return JSON.stringify({
+              date: log.date || 'Unknown',
+              mood: log.moodRating || 'Unknown',
+              tags: log.moodTags || [],
+              positiveNotes: log.positiveNotes || '',
+              challengeNotes: log.challengeNotes || '',
+              sleepHours: log.sleepHours || 0,
+              behaviors: log.behaviors || '',
+              triggers: log.triggers || '',
+            });
+          } catch (error) {
+            console.error('getDetailedLog error:', error);
+            return JSON.stringify({ error: 'Failed to get log details' });
           }
-          return JSON.stringify({
-            date: log.date,
-            mood: log.moodRating,
-            tags: log.moodTags || [],
-            positiveNotes: log.positiveNotes,
-            challengeNotes: log.challengeNotes,
-            sleepHours: log.sleepHours,
-            behaviors: log.behaviors,
-            triggers: log.triggers,
-          });
         },
       }),
       findPatterns: createRorkTool({
@@ -96,46 +115,55 @@ export default function ChatScreen() {
           category: z.enum(['moods', 'tags', 'triggers', 'behaviors']).describe('Category to analyze for patterns'),
         }),
         execute: (input) => {
-          const logs = activeChildLogs.slice(-30);
-          
-          if (input.category === 'tags') {
-            const tagsByMood: Record<string, string[]> = {};
-            logs.forEach(log => {
-              if (!tagsByMood[log.moodRating]) {
-                tagsByMood[log.moodRating] = [];
-              }
-              tagsByMood[log.moodRating].push(...(log.moodTags || []));
-            });
+          try {
+            const logs = (activeChildLogs || []).slice(-30);
             
-            const tagFrequency: Record<string, Record<string, number>> = {};
-            Object.entries(tagsByMood).forEach(([mood, tags]) => {
-              tagFrequency[mood] = tags.reduce((acc, tag) => {
-                acc[tag] = (acc[tag] || 0) + 1;
-                return acc;
-              }, {} as Record<string, number>);
-            });
+            if (input.category === 'tags') {
+              const tagsByMood: Record<string, string[]> = {};
+              logs.forEach(log => {
+                if (log?.moodRating) {
+                  if (!tagsByMood[log.moodRating]) {
+                    tagsByMood[log.moodRating] = [];
+                  }
+                  tagsByMood[log.moodRating].push(...(log.moodTags || []));
+                }
+              });
+              
+              const tagFrequency: Record<string, Record<string, number>> = {};
+              Object.entries(tagsByMood).forEach(([mood, tags]) => {
+                tagFrequency[mood] = tags.reduce((acc, tag) => {
+                  if (tag) {
+                    acc[tag] = (acc[tag] || 0) + 1;
+                  }
+                  return acc;
+                }, {} as Record<string, number>);
+              });
+              
+              return JSON.stringify({
+                category: 'Mood Tags Patterns',
+                analysis: tagFrequency,
+                insight: 'Shows which emotional tags are associated with different mood ratings',
+              });
+            }
             
-            return JSON.stringify({
-              category: 'Mood Tags Patterns',
-              analysis: tagFrequency,
-              insight: 'Shows which emotional tags are associated with different mood ratings',
-            });
+            if (input.category === 'moods') {
+              const moodTrend = logs.map(l => ({
+                date: l?.date || 'Unknown',
+                mood: l?.moodRating || 'Unknown',
+              }));
+              
+              return JSON.stringify({
+                category: 'Mood Trends',
+                trend: moodTrend,
+                insight: 'Chronological progression of mood ratings',
+              });
+            }
+            
+            return JSON.stringify({ message: 'Analysis in progress' });
+          } catch (error) {
+            console.error('findPatterns error:', error);
+            return JSON.stringify({ error: 'Failed to analyze patterns' });
           }
-          
-          if (input.category === 'moods') {
-            const moodTrend = logs.map(l => ({
-              date: l.date,
-              mood: l.moodRating,
-            }));
-            
-            return JSON.stringify({
-              category: 'Mood Trends',
-              trend: moodTrend,
-              insight: 'Chronological progression of mood ratings',
-            });
-          }
-          
-          return JSON.stringify({ message: 'Analysis in progress' });
         },
       }),
     },
