@@ -4,15 +4,50 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, Sparkles, Trash2 } from 'lucide-react-native';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { useRorkAgent, createRorkTool } from '@rork-ai/toolkit-sdk';
+import { useRorkAgent, createRorkTool, generateText } from '@rork-ai/toolkit-sdk';
 import { z } from 'zod';
+
+type ChatRole = 'user' | 'assistant';
+
+type ChatTextPart = {
+  type: 'text';
+  text: string;
+};
+
+type ChatMessage = {
+  id: string;
+  role: ChatRole;
+  parts: ChatTextPart[];
+};
+
+function makeId(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function toPlainTextFromMessageParts(parts: any[]): string {
+  try {
+    return (parts || [])
+      .map((p) => {
+        if (!p || typeof p !== 'object') return '';
+        if (p.type === 'text') return String(p.text ?? '');
+        return '';
+      })
+      .join('\n')
+      .trim();
+  } catch {
+    return '';
+  }
+}
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { activeChild, activeChildLogs = [], chatHistory = [], saveChatHistory, clearChatHistory, preferences } = useApp();
   const Colors = useMemo(() => getColors(preferences), [preferences]);
   const styles = useMemo(() => createStyles(Colors), [Colors]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState<string>('');
+  const [isFallbackMode, setIsFallbackMode] = useState<boolean>(false);
+  const [fallbackSending, setFallbackSending] = useState<boolean>(false);
+  const [fallbackError, setFallbackError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const tools = useMemo(() => ({
@@ -169,6 +204,83 @@ export default function ChatScreen() {
 
   const { messages, error, sendMessage, setMessages } = useRorkAgent({ tools });
 
+  const appendLocalTextMessage = useCallback((role: ChatRole, text: string) => {
+    const msg: ChatMessage = {
+      id: makeId(role),
+      role,
+      parts: [{ type: 'text', text }],
+    };
+    setMessages((prev: any[]) => {
+      const next = [...(prev || []), msg];
+      return next;
+    });
+  }, [setMessages]);
+
+  const fallbackSend = useCallback(async (text: string) => {
+    const toolkitUrl = process.env.EXPO_PUBLIC_TOOLKIT_URL;
+
+    if (!toolkitUrl) {
+      throw new Error('AI service is not configured');
+    }
+
+    setFallbackError(null);
+    setFallbackSending(true);
+
+    try {
+      const childContext = activeChild
+        ? {
+            name: activeChild.name || 'Unknown',
+            age: activeChild.age || 0,
+            diagnosis: activeChild.diagnosis || 'Not specified',
+            school: activeChild.schoolName || 'Not specified',
+            grade: activeChild.gradeLevel || 'Not specified',
+            triggers: activeChild.commonTriggers || [],
+          }
+        : null;
+
+      const recentLogs = (activeChildLogs || []).slice(-14);
+      const compactLogSummary = recentLogs.map((l) => ({
+        date: l?.date ?? 'Unknown',
+        mood: l?.moodRating ?? 'Unknown',
+        tags: l?.moodTags ?? [],
+        positiveNotes: (l?.positiveNotes ?? '').slice(0, 240),
+        challengeNotes: (l?.challengeNotes ?? '').slice(0, 240),
+      }));
+
+      const history = (messages || []).slice(-10).map((m: any) => {
+        const role = m?.role === 'user' ? 'user' : 'assistant';
+        const content = toPlainTextFromMessageParts(m?.parts);
+        return { role, content } as { role: 'user' | 'assistant'; content: string };
+      }).filter((m) => m.content.length > 0);
+
+      const contextBlock = `Context (use when relevant):\n${JSON.stringify({ child: childContext, recentLogs: compactLogSummary }, null, 2)}`;
+
+      console.log('=== Fallback Chat Debug ===');
+      console.log('toolkitUrl set:', !!toolkitUrl);
+      console.log('history messages:', history.length);
+      console.log('recentLogs:', recentLogs.length);
+      console.log('user input length:', text.length);
+      console.log('context length:', contextBlock.length);
+      console.log('===========================');
+
+      const assistantText = await generateText({
+        messages: [
+          ...history,
+          { role: 'user', content: `${contextBlock}\n\nUser: ${text}` },
+        ],
+      });
+
+      return assistantText;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      console.error('fallbackSend error:', e);
+      setFallbackError(msg);
+      throw e;
+    } finally {
+      setFallbackSending(false);
+    }
+  }, [activeChild, activeChildLogs, messages]);
+
   useEffect(() => {
     if (chatHistory && chatHistory.length > 0 && messages.length === 0) {
       setMessages(chatHistory);
@@ -205,14 +317,16 @@ export default function ChatScreen() {
   }, [error]);
 
   const handleSend = useCallback(async () => {
-    if (!input.trim()) return;
-    
+    const text = input.trim();
+    if (!text) return;
+
     const toolkitUrl = process.env.EXPO_PUBLIC_TOOLKIT_URL;
     const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
     const teamId = process.env.EXPO_PUBLIC_TEAM_ID;
-    
+
     console.log('=== Chat Send Debug ===');
-    console.log('Input length:', input.length);
+    console.log('isFallbackMode:', isFallbackMode);
+    console.log('Input length:', text.length);
     console.log('EXPO_PUBLIC_TOOLKIT_URL:', toolkitUrl ? 'SET' : 'NOT SET');
     console.log('EXPO_PUBLIC_PROJECT_ID:', projectId ? 'SET' : 'NOT SET');
     console.log('EXPO_PUBLIC_TEAM_ID:', teamId ? 'SET' : 'NOT SET');
@@ -220,38 +334,58 @@ export default function ChatScreen() {
     console.log('Message count:', messages.length);
     console.log('Tools count:', Object.keys(tools).length);
     console.log('======================');
-    
+
     if (!toolkitUrl || !projectId || !teamId) {
       console.error('Missing environment variables!');
-      Alert.alert(
-        'Configuration Error',
-        'AI chat is not configured properly. Please contact support.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Configuration Error', 'AI chat is not configured properly. Please contact support.', [{ text: 'OK' }]);
       return;
     }
-    
+
+    setInput('');
+
+    if (isFallbackMode) {
+      appendLocalTextMessage('user', text);
+      try {
+        const assistant = await fallbackSend(text);
+        appendLocalTextMessage('assistant', assistant);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unable to connect to AI service';
+        Alert.alert('Connection Error', `${errorMessage}. Please try again.`, [{ text: 'OK' }]);
+      }
+      return;
+    }
+
     try {
-      await sendMessage(input);
-      setInput('');
+      await sendMessage(text);
     } catch (err) {
       console.error('=== Send Error ===');
       console.error('Error:', err);
       console.error('==================');
-      
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : typeof err === 'string' 
-        ? err 
-        : 'Unable to connect to AI service';
-      
-      Alert.alert(
-        'Connection Error',
-        `${errorMessage}. Please check your internet connection and try again.`,
-        [{ text: 'OK' }]
-      );
+
+      const errorMessage = err instanceof Error
+        ? err.message
+        : typeof err === 'string'
+          ? err
+          : 'Unable to connect to AI service';
+
+      const isServerError = /internal server error/i.test(errorMessage) || /500/.test(errorMessage);
+
+      if (isServerError) {
+        console.warn('Switching chat to fallback (non-streaming) mode due to server error');
+        setIsFallbackMode(true);
+        appendLocalTextMessage('user', text);
+        try {
+          const assistant = await fallbackSend(text);
+          appendLocalTextMessage('assistant', assistant);
+          return;
+        } catch {
+          // fall through to alert below
+        }
+      }
+
+      Alert.alert('Connection Error', `${errorMessage}. Please check your internet connection and try again.`, [{ text: 'OK' }]);
     }
-  }, [input, sendMessage, activeChild, messages.length, tools]);
+  }, [activeChild?.id, appendLocalTextMessage, fallbackSend, input, isFallbackMode, messages.length, sendMessage, tools]);
 
   const handleClearHistory = useCallback(() => {
     Alert.alert(
@@ -293,7 +427,7 @@ export default function ChatScreen() {
             <Sparkles size={32} color={Colors.secondary} />
             <View>
               <Text style={styles.title}>Autumn</Text>
-              <Text style={styles.subtitle}>AI Assistant with Memory</Text>
+              <Text style={styles.subtitle}>AI Assistant{isFallbackMode ? ' (basic mode)' : ' with Memory'}</Text>
             </View>
           </View>
           {messages.length > 0 && (
@@ -384,20 +518,33 @@ export default function ChatScreen() {
             </View>
           ))}
 
-          {error && (
+          {(error || fallbackError) && (
             <View style={styles.errorBubble}>
               <Text style={styles.errorText}>Something went wrong. Please try again.</Text>
               <Text style={[styles.errorText, { fontSize: 12, marginTop: 8, opacity: 0.8 }]}>
-                {typeof error === 'object' && error !== null && 'message' in error 
-                  ? String(error.message)
-                  : typeof error === 'string' 
-                  ? error 
-                  : 'Unknown error occurred'}
+                {fallbackError
+                  ? fallbackError
+                  : typeof error === 'object' && error !== null && 'message' in error
+                    ? String((error as any).message)
+                    : typeof error === 'string'
+                      ? error
+                      : 'Unknown error occurred'}
               </Text>
-              {__DEV__ && (
-                <Text style={[styles.errorText, { fontSize: 11, marginTop: 4, fontFamily: 'monospace' }]}>
-                  Debug: {JSON.stringify(error, null, 2)}
-                </Text>
+              {isFallbackMode && (
+                <TouchableOpacity
+                  testID="chatExitBasicMode"
+                  style={[styles.suggestionButton, { marginTop: 12 }]}
+                  onPress={() => {
+                    setIsFallbackMode(false);
+                    setFallbackError(null);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.suggestionText}>Try full AI mode again</Text>
+                </TouchableOpacity>
+              )}
+              {__DEV__ && error && (
+                <Text style={[styles.errorText, { fontSize: 11, marginTop: 8, fontFamily: 'monospace' }]}>Debug: {JSON.stringify(error, null, 2)}</Text>
               )}
             </View>
           )}
@@ -407,21 +554,28 @@ export default function ChatScreen() {
 
         <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 16, backgroundColor: Colors.background, borderTopColor: Colors.border }]}>
           <TextInput
+            testID="chatInput"
             style={styles.input}
             value={input}
             onChangeText={setInput}
-            placeholder="Ask me anything..."
+            placeholder={isFallbackMode ? "Ask (basic mode)…" : "Ask me anything..."}
             placeholderTextColor={Colors.textLight}
             multiline
             maxLength={500}
+            editable={!fallbackSending}
           />
           <TouchableOpacity
-            style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]}
+            testID="chatSendButton"
+            style={[styles.sendButton, (!input.trim() || fallbackSending) && styles.sendButtonDisabled]}
             onPress={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() || fallbackSending}
             activeOpacity={0.7}
           >
-            <Send size={20} color={Colors.background} />
+            {fallbackSending ? (
+              <ActivityIndicator size="small" color={Colors.background} />
+            ) : (
+              <Send size={20} color={Colors.background} />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
