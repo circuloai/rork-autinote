@@ -3,7 +3,8 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { LogBox, View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { LogBox, View, ActivityIndicator, StyleSheet, Text, Platform } from "react-native";
+import * as Updates from "expo-updates";
 import { AppProvider } from "@/contexts/AppContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -60,17 +61,46 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log("[updates] runtimeVersion:", (Updates as any)?.runtimeVersion);
+        console.log("[updates] channel:", (Updates as any)?.channel);
+        console.log("[updates] updateId:", (Updates as any)?.updateId);
+        console.log("[updates] isEmbeddedLaunch:", (Updates as any)?.isEmbeddedLaunch);
+        console.log("[updates] isEnabled:", (Updates as any)?.isEnabled);
+        console.log("[updates] platform:", Platform.OS);
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        if (Platform.OS !== "web" && (Updates as any)?.isEnabled) {
+          try {
+            console.log("[updates] checking for update on app start...");
+            const result = await Updates.checkForUpdateAsync();
+            console.log("[updates] checkForUpdateAsync result:", result);
+
+            if (result.isAvailable) {
+              console.log("[updates] update available, fetching...");
+              const fetched = await Updates.fetchUpdateAsync();
+              console.log("[updates] fetchUpdateAsync result:", fetched);
+
+              console.log("[updates] reloading to apply update...");
+              await Updates.reloadAsync();
+            }
+          } catch (updateError) {
+            console.error("[updates] error during auto update check:", updateError);
+          }
+        } else {
+          console.log("[updates] skipping auto update check (web or updates disabled)");
+        }
+
         setAppIsReady(true);
       } catch (e) {
-        console.error('Error during app initialization:', e);
+        console.error("Error during app initialization:", e);
         setHasError(true);
         setAppIsReady(true);
       } finally {
         try {
           await SplashScreen.hideAsync();
         } catch (error) {
-          console.error('Error hiding splash screen:', error);
+          console.error("Error hiding splash screen:", error);
         }
       }
     }
