@@ -217,7 +217,14 @@ export default function ChatScreen() {
     console.log('EXPO_PUBLIC_PROJECT_ID:', projectId);
     console.log('EXPO_PUBLIC_TEAM_ID:', teamId);
     console.log('Active Child:', activeChild?.id);
+    console.log('Active Child Name:', activeChild?.name);
     console.log('Message count:', messages.length);
+    console.log('Has tools:', Object.keys({
+      getChildProfile: true,
+      getLogsSummary: true,
+      getDetailedLog: true,
+      findPatterns: true,
+    }));
     console.log('=====================');
     
     if (!toolkitUrl) {
@@ -228,15 +235,39 @@ export default function ChatScreen() {
       );
       return;
     }
+
+    if (!projectId || !teamId) {
+      console.error('Missing required env vars');
+      console.error('projectId:', projectId);
+      console.error('teamId:', teamId);
+      Alert.alert(
+        'Configuration Error',
+        'Project configuration is incomplete. Please contact support.'
+      );
+      return;
+    }
     
     try {
+      console.log('Attempting to send message...');
       await sendMessage(input);
+      console.log('Message sent successfully');
       setInput('');
     } catch (err) {
       console.error('Send message error:', err);
-      console.error('Error details:', JSON.stringify(err, null, 2));
+      console.error('Error type:', typeof err);
+      console.error('Error constructor:', err?.constructor?.name);
+      if (err instanceof Error) {
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+      }
+      console.error('Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+      
+      Alert.alert(
+        'Chat Error',
+        `Failed to send message: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`
+      );
     }
-  }, [input, sendMessage, activeChild?.id, messages.length]);
+  }, [input, sendMessage, activeChild, messages.length]);
 
   const handleClearHistory = useCallback(() => {
     Alert.alert(
