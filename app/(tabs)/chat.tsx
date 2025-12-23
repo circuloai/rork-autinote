@@ -15,159 +15,159 @@ export default function ChatScreen() {
   const [input, setInput] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const { messages, error, sendMessage, setMessages } = useRorkAgent({
-    tools: {
-      getChildProfile: createRorkTool({
-        description: 'Get child profile info including diagnosis, triggers, age, school',
-        zodSchema: z.object({}),
-        execute: () => {
-          try {
-            if (!activeChild) return JSON.stringify({ error: 'No profile' });
-            return JSON.stringify({
-              name: activeChild.name || 'Unknown',
-              age: activeChild.age || 0,
-              diagnosis: activeChild.diagnosis || 'Not specified',
-              school: activeChild.schoolName || 'Not specified',
-              grade: activeChild.gradeLevel || 'Not specified',
-              triggers: activeChild.commonTriggers || [],
-            });
-          } catch (error) {
-            console.error('getChildProfile error:', error);
-            return JSON.stringify({ error: 'Failed to get profile' });
-          }
-        },
+  const tools = useMemo(() => ({
+    getChildProfile: createRorkTool({
+      description: 'Get child profile info including diagnosis, triggers, age, school',
+      zodSchema: z.object({}),
+      execute: () => {
+        try {
+          if (!activeChild) return JSON.stringify({ error: 'No profile' });
+          return JSON.stringify({
+            name: activeChild.name || 'Unknown',
+            age: activeChild.age || 0,
+            diagnosis: activeChild.diagnosis || 'Not specified',
+            school: activeChild.schoolName || 'Not specified',
+            grade: activeChild.gradeLevel || 'Not specified',
+            triggers: activeChild.commonTriggers || [],
+          });
+        } catch (error) {
+          console.error('getChildProfile error:', error);
+          return JSON.stringify({ error: 'Failed to get profile' });
+        }
+      },
+    }),
+    getLogsSummary: createRorkTool({
+      description: 'Get a comprehensive summary of log entries for the child. Use this to analyze patterns, moods, and trends.',
+      zodSchema: z.object({
+        days: z.number().describe('Number of recent days to summarize').optional(),
       }),
-      getLogsSummary: createRorkTool({
-        description: 'Get a comprehensive summary of log entries for the child. Use this to analyze patterns, moods, and trends.',
-        zodSchema: z.object({
-          days: z.number().describe('Number of recent days to summarize').optional(),
-        }),
-        execute: (input) => {
-          try {
-            const days = input.days || 30;
-            const recentLogs = (activeChildLogs || []).slice(-days);
-            
-            const moodCounts = recentLogs.reduce((acc, log) => {
-              if (log?.moodRating) {
-                acc[log.moodRating] = (acc[log.moodRating] || 0) + 1;
+      execute: (input) => {
+        try {
+          const days = input.days || 30;
+          const recentLogs = (activeChildLogs || []).slice(-days);
+          
+          const moodCounts = recentLogs.reduce((acc, log) => {
+            if (log?.moodRating) {
+              acc[log.moodRating] = (acc[log.moodRating] || 0) + 1;
+            }
+            return acc;
+          }, {} as Record<string, number>);
+          
+          const tagCounts = recentLogs.reduce((acc, log) => {
+            (log?.moodTags || []).forEach((tag: string) => {
+              if (tag) {
+                acc[tag] = (acc[tag] || 0) + 1;
               }
-              return acc;
-            }, {} as Record<string, number>);
+            });
+            return acc;
+          }, {} as Record<string, number>);
+          
+          return JSON.stringify({
+            period: `Last ${days} days`,
+            totalLogs: recentLogs.length,
+            moodDistribution: moodCounts,
+            commonTags: tagCounts,
+            recentEntries: recentLogs.slice(-7).map(l => ({
+              date: l?.date || 'Unknown',
+              mood: l?.moodRating || 'Unknown',
+              tags: l?.moodTags || [],
+              positiveNotes: l?.positiveNotes || '',
+              challengeNotes: l?.challengeNotes || '',
+            })),
+          });
+        } catch (error) {
+          console.error('getLogsSummary error:', error);
+          return JSON.stringify({ error: 'Failed to get logs summary' });
+        }
+      },
+    }),
+    getDetailedLog: createRorkTool({
+      description: 'Get detailed information about a specific log entry by date',
+      zodSchema: z.object({
+        date: z.string().describe('Date of the log entry in ISO format (YYYY-MM-DD)'),
+      }),
+      execute: (input) => {
+        try {
+          const log = (activeChildLogs || []).find(l => l?.date === input.date);
+          if (!log) {
+            return JSON.stringify({ error: 'No log found for this date' });
+          }
+          return JSON.stringify({
+            date: log.date || 'Unknown',
+            mood: log.moodRating || 'Unknown',
+            tags: log.moodTags || [],
+            positiveNotes: log.positiveNotes || '',
+            challengeNotes: log.challengeNotes || '',
+            sleepHours: log.sleepHours || 0,
+            behaviors: log.behaviors || '',
+            triggers: log.triggers || '',
+          });
+        } catch (error) {
+          console.error('getDetailedLog error:', error);
+          return JSON.stringify({ error: 'Failed to get log details' });
+        }
+      },
+    }),
+    findPatterns: createRorkTool({
+      description: 'Analyze logs to identify patterns in moods, triggers, and behaviors',
+      zodSchema: z.object({
+        category: z.enum(['moods', 'tags', 'triggers', 'behaviors']).describe('Category to analyze for patterns'),
+      }),
+      execute: (input) => {
+        try {
+          const logs = (activeChildLogs || []).slice(-30);
+          
+          if (input.category === 'tags') {
+            const tagsByMood: Record<string, string[]> = {};
+            logs.forEach(log => {
+              if (log?.moodRating) {
+                if (!tagsByMood[log.moodRating]) {
+                  tagsByMood[log.moodRating] = [];
+                }
+                tagsByMood[log.moodRating].push(...(log.moodTags || []));
+              }
+            });
             
-            const tagCounts = recentLogs.reduce((acc, log) => {
-              (log?.moodTags || []).forEach((tag: string) => {
+            const tagFrequency: Record<string, Record<string, number>> = {};
+            Object.entries(tagsByMood).forEach(([mood, tags]) => {
+              tagFrequency[mood] = tags.reduce((acc, tag) => {
                 if (tag) {
                   acc[tag] = (acc[tag] || 0) + 1;
                 }
-              });
-              return acc;
-            }, {} as Record<string, number>);
+                return acc;
+              }, {} as Record<string, number>);
+            });
             
             return JSON.stringify({
-              period: `Last ${days} days`,
-              totalLogs: recentLogs.length,
-              moodDistribution: moodCounts,
-              commonTags: tagCounts,
-              recentEntries: recentLogs.slice(-7).map(l => ({
-                date: l?.date || 'Unknown',
-                mood: l?.moodRating || 'Unknown',
-                tags: l?.moodTags || [],
-                positiveNotes: l?.positiveNotes || '',
-                challengeNotes: l?.challengeNotes || '',
-              })),
+              category: 'Mood Tags Patterns',
+              analysis: tagFrequency,
+              insight: 'Shows which emotional tags are associated with different mood ratings',
             });
-          } catch (error) {
-            console.error('getLogsSummary error:', error);
-            return JSON.stringify({ error: 'Failed to get logs summary' });
           }
-        },
-      }),
-      getDetailedLog: createRorkTool({
-        description: 'Get detailed information about a specific log entry by date',
-        zodSchema: z.object({
-          date: z.string().describe('Date of the log entry in ISO format (YYYY-MM-DD)'),
-        }),
-        execute: (input) => {
-          try {
-            const log = (activeChildLogs || []).find(l => l?.date === input.date);
-            if (!log) {
-              return JSON.stringify({ error: 'No log found for this date' });
-            }
+          
+          if (input.category === 'moods') {
+            const moodTrend = logs.map(l => ({
+              date: l?.date || 'Unknown',
+              mood: l?.moodRating || 'Unknown',
+            }));
+            
             return JSON.stringify({
-              date: log.date || 'Unknown',
-              mood: log.moodRating || 'Unknown',
-              tags: log.moodTags || [],
-              positiveNotes: log.positiveNotes || '',
-              challengeNotes: log.challengeNotes || '',
-              sleepHours: log.sleepHours || 0,
-              behaviors: log.behaviors || '',
-              triggers: log.triggers || '',
+              category: 'Mood Trends',
+              trend: moodTrend,
+              insight: 'Chronological progression of mood ratings',
             });
-          } catch (error) {
-            console.error('getDetailedLog error:', error);
-            return JSON.stringify({ error: 'Failed to get log details' });
           }
-        },
-      }),
-      findPatterns: createRorkTool({
-        description: 'Analyze logs to identify patterns in moods, triggers, and behaviors',
-        zodSchema: z.object({
-          category: z.enum(['moods', 'tags', 'triggers', 'behaviors']).describe('Category to analyze for patterns'),
-        }),
-        execute: (input) => {
-          try {
-            const logs = (activeChildLogs || []).slice(-30);
-            
-            if (input.category === 'tags') {
-              const tagsByMood: Record<string, string[]> = {};
-              logs.forEach(log => {
-                if (log?.moodRating) {
-                  if (!tagsByMood[log.moodRating]) {
-                    tagsByMood[log.moodRating] = [];
-                  }
-                  tagsByMood[log.moodRating].push(...(log.moodTags || []));
-                }
-              });
-              
-              const tagFrequency: Record<string, Record<string, number>> = {};
-              Object.entries(tagsByMood).forEach(([mood, tags]) => {
-                tagFrequency[mood] = tags.reduce((acc, tag) => {
-                  if (tag) {
-                    acc[tag] = (acc[tag] || 0) + 1;
-                  }
-                  return acc;
-                }, {} as Record<string, number>);
-              });
-              
-              return JSON.stringify({
-                category: 'Mood Tags Patterns',
-                analysis: tagFrequency,
-                insight: 'Shows which emotional tags are associated with different mood ratings',
-              });
-            }
-            
-            if (input.category === 'moods') {
-              const moodTrend = logs.map(l => ({
-                date: l?.date || 'Unknown',
-                mood: l?.moodRating || 'Unknown',
-              }));
-              
-              return JSON.stringify({
-                category: 'Mood Trends',
-                trend: moodTrend,
-                insight: 'Chronological progression of mood ratings',
-              });
-            }
-            
-            return JSON.stringify({ message: 'Analysis in progress' });
-          } catch (error) {
-            console.error('findPatterns error:', error);
-            return JSON.stringify({ error: 'Failed to analyze patterns' });
-          }
-        },
-      }),
-    },
-  });
+          
+          return JSON.stringify({ message: 'Analysis in progress' });
+        } catch (error) {
+          console.error('findPatterns error:', error);
+          return JSON.stringify({ error: 'Failed to analyze patterns' });
+        }
+      },
+    }),
+  }), [activeChild, activeChildLogs]);
+
+  const { messages, error, sendMessage, setMessages } = useRorkAgent({ tools });
 
   useEffect(() => {
     if (chatHistory && chatHistory.length > 0 && messages.length === 0) {
@@ -211,63 +211,47 @@ export default function ChatScreen() {
     const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
     const teamId = process.env.EXPO_PUBLIC_TEAM_ID;
     
-    console.log('=== Chat Debug Info ===');
-    console.log('Input:', input);
-    console.log('EXPO_PUBLIC_TOOLKIT_URL:', toolkitUrl);
-    console.log('EXPO_PUBLIC_PROJECT_ID:', projectId);
-    console.log('EXPO_PUBLIC_TEAM_ID:', teamId);
+    console.log('=== Chat Send Debug ===');
+    console.log('Input length:', input.length);
+    console.log('EXPO_PUBLIC_TOOLKIT_URL:', toolkitUrl ? 'SET' : 'NOT SET');
+    console.log('EXPO_PUBLIC_PROJECT_ID:', projectId ? 'SET' : 'NOT SET');
+    console.log('EXPO_PUBLIC_TEAM_ID:', teamId ? 'SET' : 'NOT SET');
     console.log('Active Child:', activeChild?.id);
-    console.log('Active Child Name:', activeChild?.name);
     console.log('Message count:', messages.length);
-    console.log('Has tools:', Object.keys({
-      getChildProfile: true,
-      getLogsSummary: true,
-      getDetailedLog: true,
-      findPatterns: true,
-    }));
-    console.log('=====================');
+    console.log('Tools count:', Object.keys(tools).length);
+    console.log('======================');
     
-    if (!toolkitUrl) {
-      console.error('EXPO_PUBLIC_TOOLKIT_URL is not set!');
+    if (!toolkitUrl || !projectId || !teamId) {
+      console.error('Missing environment variables!');
       Alert.alert(
         'Configuration Error',
-        'AI chat is not configured properly. Please contact support.'
-      );
-      return;
-    }
-
-    if (!projectId || !teamId) {
-      console.error('Missing required env vars');
-      console.error('projectId:', projectId);
-      console.error('teamId:', teamId);
-      Alert.alert(
-        'Configuration Error',
-        'Project configuration is incomplete. Please contact support.'
+        'AI chat is not configured properly. Please contact support.',
+        [{ text: 'OK' }]
       );
       return;
     }
     
     try {
-      console.log('Attempting to send message...');
       await sendMessage(input);
-      console.log('Message sent successfully');
       setInput('');
     } catch (err) {
-      console.error('Send message error:', err);
-      console.error('Error type:', typeof err);
-      console.error('Error constructor:', err?.constructor?.name);
-      if (err instanceof Error) {
-        console.error('Error message:', err.message);
-        console.error('Error stack:', err.stack);
-      }
-      console.error('Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+      console.error('=== Send Error ===');
+      console.error('Error:', err);
+      console.error('==================');
+      
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : typeof err === 'string' 
+        ? err 
+        : 'Unable to connect to AI service';
       
       Alert.alert(
-        'Chat Error',
-        `Failed to send message: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`
+        'Connection Error',
+        `${errorMessage}. Please check your internet connection and try again.`,
+        [{ text: 'OK' }]
       );
     }
-  }, [input, sendMessage, activeChild, messages.length]);
+  }, [input, sendMessage, activeChild, messages.length, tools]);
 
   const handleClearHistory = useCallback(() => {
     Alert.alert(
