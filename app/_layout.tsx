@@ -70,7 +70,11 @@ export default function RootLayout() {
 
         await new Promise((resolve) => setTimeout(resolve, 100));
 
-        if (Platform.OS !== "web" && (Updates as any)?.isEnabled) {
+        const canCheckUpdates = Platform.OS !== "web" && 
+          !__DEV__ && 
+          (Updates as any)?.isEnabled;
+
+        if (canCheckUpdates) {
           try {
             console.log("[updates] checking for update on app start...");
             const result = await Updates.checkForUpdateAsync();
@@ -88,7 +92,7 @@ export default function RootLayout() {
             console.error("[updates] error during auto update check:", updateError);
           }
         } else {
-          console.log("[updates] skipping auto update check (web or updates disabled)");
+          console.log("[updates] skipping auto update check (web, dev mode, or updates disabled)");
         }
 
         setAppIsReady(true);
