@@ -70,30 +70,7 @@ export default function RootLayout() {
 
         await new Promise((resolve) => setTimeout(resolve, 100));
 
-        const canCheckUpdates = Platform.OS !== "web" && 
-          !__DEV__ && 
-          (Updates as any)?.isEnabled;
-
-        if (canCheckUpdates) {
-          try {
-            console.log("[updates] checking for update on app start...");
-            const result = await Updates.checkForUpdateAsync();
-            console.log("[updates] checkForUpdateAsync result:", result);
-
-            if (result.isAvailable) {
-              console.log("[updates] update available, fetching...");
-              const fetched = await Updates.fetchUpdateAsync();
-              console.log("[updates] fetchUpdateAsync result:", fetched);
-
-              console.log("[updates] reloading to apply update...");
-              await Updates.reloadAsync();
-            }
-          } catch (updateError) {
-            console.error("[updates] error during auto update check:", updateError);
-          }
-        } else {
-          console.log("[updates] skipping auto update check (web, dev mode, or updates disabled)");
-        }
+        console.log("[updates] OTA updates disabled");
 
         setAppIsReady(true);
       } catch (e) {
