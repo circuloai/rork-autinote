@@ -355,10 +355,18 @@ export default function ChatScreen() {
           ? err
           : 'Unable to connect to AI service';
 
-      const isServerError = /internal server error/i.test(errorMessage) || /500/.test(errorMessage);
+      const isConnectionError = 
+        /internal server error/i.test(errorMessage) || 
+        /500/.test(errorMessage) ||
+        /fetch failed/i.test(errorMessage) ||
+        /could not connect/i.test(errorMessage) ||
+        /network/i.test(errorMessage) ||
+        /timeout/i.test(errorMessage) ||
+        /ECONNREFUSED/i.test(errorMessage) ||
+        /unable to connect/i.test(errorMessage);
 
-      if (isServerError) {
-        console.warn('Switching chat to fallback (non-streaming) mode due to server error');
+      if (isConnectionError) {
+        console.warn('Switching chat to fallback (non-streaming) mode due to connection error');
         setIsFallbackMode(true);
         appendLocalTextMessage('user', text);
         try {
@@ -370,7 +378,23 @@ export default function ChatScreen() {
         }
       }
 
-      Alert.alert('Connection Error', `${errorMessage}. Please check your internet connection and try again.`, [{ text: 'OK' }]);
+      Alert.alert(
+        'Connection Error', 
+        'Unable to connect to AI service. Please check your internet connection and try again.', 
+        [
+          { text: 'OK' },
+          { 
+            text: 'Try Basic Mode', 
+            onPress: () => {
+              setIsFallbackMode(true);
+              appendLocalTextMessage('user', text);
+              fallbackSend(text).then(assistant => {
+                appendLocalTextMessage('assistant', assistant);
+              }).catch(() => {});
+            }
+          }
+        ]
+      );
     }
   }, [activeChild?.id, appendLocalTextMessage, fallbackSend, input, isFallbackMode, messages.length, sendMessage, tools]);
 
