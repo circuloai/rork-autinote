@@ -320,26 +320,13 @@ export default function ChatScreen() {
     const text = input.trim();
     if (!text) return;
 
-    const toolkitUrl = process.env.EXPO_PUBLIC_TOOLKIT_URL;
-    const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
-    const teamId = process.env.EXPO_PUBLIC_TEAM_ID;
-
     console.log('=== Chat Send Debug ===');
     console.log('isFallbackMode:', isFallbackMode);
     console.log('Input length:', text.length);
-    console.log('EXPO_PUBLIC_TOOLKIT_URL:', toolkitUrl ? 'SET' : 'NOT SET');
-    console.log('EXPO_PUBLIC_PROJECT_ID:', projectId ? 'SET' : 'NOT SET');
-    console.log('EXPO_PUBLIC_TEAM_ID:', teamId ? 'SET' : 'NOT SET');
     console.log('Active Child:', activeChild?.id);
     console.log('Message count:', messages.length);
     console.log('Tools count:', Object.keys(tools).length);
     console.log('======================');
-
-    if (!toolkitUrl || !projectId || !teamId) {
-      console.error('Missing environment variables!');
-      Alert.alert('Configuration Error', 'AI chat is not configured properly. Please contact support.', [{ text: 'OK' }]);
-      return;
-    }
 
     setInput('');
 

@@ -3,7 +3,7 @@
     "name": "Autinote",
     "owner": "gauravkales-organization",
     "slug": "Autinote",
-    "version": "1.0.8",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rork-app",
@@ -42,15 +42,7 @@
       "typedRoutes": true
     },
     "updates": {
-      "enabled": true,
-      "url": "<UNKNOWN>",
-      "requestHeaders": {},
-      "checkAutomatically": "ALWAYS",
-      "fallbackToCacheTimeout": 0,
-      "useEmbeddedUpdate": true,
-      "assetPatternsToBeBundled": [],
-      "disableAntiBrickingMeasures": false
-    },
-    "runtimeVersion": "<UNKNOWN>"
+      "enabled": false
+    }
   }
 }
