@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Check, ArrowLeft } from 'lucide-react-native';
+import * as Crypto from 'expo-crypto';
 import CustomSlider from '@/components/CustomSlider';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -118,7 +119,7 @@ export default function MeltdownLogScreen() {
     }
 
     const logEntry: MeltdownLogEntry = {
-      id: Date.now().toString(),
+      id: Crypto.randomUUID(),
       childId: activeChild.id,
       date: new Date().toISOString(),
       type: 'meltdown',

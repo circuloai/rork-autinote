@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Check, Sparkles } from 'lucide-react-native';
+import * as Crypto from 'expo-crypto';
 import CustomSlider from '@/components/CustomSlider';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -226,7 +227,7 @@ ${predefinedChallengeSuggestions.join('\n')}`;
     }
 
     const logEntry: DailyLogEntry = {
-      id: Date.now().toString(),
+      id: Crypto.randomUUID(),
       childId: activeChild.id,
       date: selectedDate.toISOString(),
       type: 'daily',
