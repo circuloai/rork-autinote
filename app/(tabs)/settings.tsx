@@ -75,7 +75,9 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: () => {
             logout();
-            router.replace('/' as any);
+            setTimeout(() => {
+              router.replace('/' as any);
+            }, 100);
           },
         },
       ]
