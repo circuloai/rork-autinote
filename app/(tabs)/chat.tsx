@@ -304,7 +304,7 @@ export default function ChatScreen() {
   }, [messages.length]);
 
   useEffect(() => {
-    if (error) {
+    if (error && !isFallbackMode) {
       console.error('=== Chat Error ===');
       console.error('Error type:', typeof error);
       console.error('Error:', error);
@@ -317,12 +317,12 @@ export default function ChatScreen() {
       console.error('==================');
       
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (/internal server error/i.test(errorMessage)) {
-        console.warn('[Chat] Detected internal server error, switching to fallback mode');
+      if (/internal server error/i.test(errorMessage) || /500/.test(errorMessage) || /fetch failed/i.test(errorMessage)) {
+        console.warn('[Chat] Detected server error, switching to fallback mode');
         setIsFallbackMode(true);
       }
     }
-  }, [error]);
+  }, [error, isFallbackMode]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -537,18 +537,20 @@ export default function ChatScreen() {
             </View>
           ))}
 
-          {(error || fallbackError) && (
+          {(error && !isFallbackMode || fallbackError) && (
             <View style={styles.errorBubble}>
-              <Text style={styles.errorText}>Something went wrong. Please try again.</Text>
-              <Text style={[styles.errorText, { fontSize: 12, marginTop: 8, opacity: 0.8 }]}>
-                {fallbackError
-                  ? fallbackError
-                  : typeof error === 'object' && error !== null && 'message' in error
-                    ? String((error as any).message)
-                    : typeof error === 'string'
-                      ? error
-                      : 'Unknown error occurred'}
-              </Text>
+              <Text style={styles.errorText}>{isFallbackMode ? 'Switched to basic mode due to connectivity issues.' : 'Something went wrong. Please try again.'}</Text>
+              {!isFallbackMode && (
+                <Text style={[styles.errorText, { fontSize: 12, marginTop: 8, opacity: 0.8 }]}>
+                  {fallbackError
+                    ? fallbackError
+                    : typeof error === 'object' && error !== null && 'message' in error
+                      ? String((error as any).message)
+                      : typeof error === 'string'
+                        ? error
+                        : 'Unknown error occurred'}
+                </Text>
+              )}
               {isFallbackMode && (
                 <TouchableOpacity
                   testID="chatExitBasicMode"
