@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Animated, Alert, ActivityIndicator } from 'react-native';
 import { ArrowRight, X, Bell, Clock, CheckCircle2, Type, Moon, Volume2, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -57,29 +57,12 @@ export default function OnboardingScreen() {
   const [newReminderTone, setNewReminderTone] = useState<ReminderTone>('chime');
   const [newReminderMessage, setNewReminderMessage] = useState('Would you like to log today notes?');
 
-  const [selectedColorTheme, setSelectedColorTheme] = useState<'mint' | 'lavender' | 'peach'>('mint');
   const [darkMode, setDarkMode] = useState(false);
   const [textToSpeech, setTextToSpeech] = useState(false);
   const [fontSizeScale, setFontSizeScale] = useState<'small' | 'medium' | 'large'>('medium');
   const celebrationScale = new Animated.Value(0);
 
-  const themeColors = useMemo(() => {
-    const themes = {
-      mint: {
-        light: { background: '#C8F2E0', bubble: '#7DE3BD', primary: '#10B981' },
-        dark: { background: '#0D5141', bubble: '#0D7556', primary: '#34D399' },
-      },
-      lavender: {
-        light: { background: '#E5DEFF', bubble: '#C4B0FF', primary: '#8B5CF6' },
-        dark: { background: '#2E1C5B', bubble: '#4C3A7A', primary: '#A78BFA' },
-      },
-      peach: {
-        light: { background: '#FFE5D9', bubble: '#FFCAB0', primary: '#F97316' },
-        dark: { background: '#7C3410', bubble: '#9A5A3F', primary: '#FB923C' },
-      },
-    };
-    return darkMode ? themes[selectedColorTheme].dark : themes[selectedColorTheme].light;
-  }, [selectedColorTheme, darkMode]);
+
 
   const getFontSize = (baseSize: number): number => {
     const scale = { small: 0.85, medium: 1, large: 1.15 }[fontSizeScale];
@@ -295,7 +278,7 @@ export default function OnboardingScreen() {
         .insert({
           user_id: userId,
           theme: darkMode ? 'dark' : 'light',
-          color_theme: selectedColorTheme,
+          color_theme: 'mint',
           font_size: fontSizeScale,
           text_to_speech: textToSpeech,
           reminders: quickReminders.some(r => r.enabled) || customReminders.length > 0,
@@ -319,7 +302,7 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
@@ -612,60 +595,7 @@ export default function OnboardingScreen() {
           {step === 4 && (
             <View style={styles.form}>
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Choose Your Color Theme</Text>
-                <View style={styles.themeGrid}>
-                  <TouchableOpacity
-                    style={[
-                      styles.themeOption,
-                      selectedColorTheme === 'mint' && styles.themeOptionActive,
-                      { backgroundColor: '#C8F2E0' },
-                    ]}
-                    onPress={() => setSelectedColorTheme('mint')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.themeBubble, { backgroundColor: '#7DE3BD' }]} />
-                    <Text style={styles.themeLabel}>Mint</Text>
-                    {selectedColorTheme === 'mint' && (
-                      <CheckCircle2 size={20} color={Colors.primary} style={styles.themeCheck} />
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.themeOption,
-                      selectedColorTheme === 'lavender' && styles.themeOptionActive,
-                      { backgroundColor: '#E5DEFF' },
-                    ]}
-                    onPress={() => setSelectedColorTheme('lavender')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.themeBubble, { backgroundColor: '#C4B0FF' }]} />
-                    <Text style={styles.themeLabel}>Lavender</Text>
-                    {selectedColorTheme === 'lavender' && (
-                      <CheckCircle2 size={20} color={Colors.primary} style={styles.themeCheck} />
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.themeOption,
-                      selectedColorTheme === 'peach' && styles.themeOptionActive,
-                      { backgroundColor: '#FFE5D9' },
-                    ]}
-                    onPress={() => setSelectedColorTheme('peach')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.themeBubble, { backgroundColor: '#FFCAB0' }]} />
-                    <Text style={styles.themeLabel}>Peach</Text>
-                    {selectedColorTheme === 'peach' && (
-                      <CheckCircle2 size={20} color={Colors.primary} style={styles.themeCheck} />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Accessibility Options</Text>
+                <Text style={styles.sectionTitle}>Theme & Accessibility</Text>
                 
                 <View style={styles.accessibilityCard}>
                   <View style={styles.accessibilityRow}>
