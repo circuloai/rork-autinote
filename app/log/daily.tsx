@@ -256,7 +256,7 @@ ${predefinedChallengeSuggestions.join('\n')}`;
           <Text style={styles.title}>Daily Log</Text>
         </View>
         <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-          <Check size={24} color={Colors.primary} />
+          <Check size={24} color={Colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.primary + '20',
+    backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   tagTextSelected: {
-    color: Colors.primary,
+    color: Colors.text,
     fontWeight: '600' as const,
   },
   textArea: {
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   },
   suggestionChipText: {
     fontSize: 14,
-    color: Colors.primary,
+    color: Colors.text,
     fontWeight: '500' as const,
   },
   existingLogsNotice: {

@@ -88,9 +88,9 @@ export default function SettingsScreen() {
       items: [
         {
           icon: isCheckingUpdates ? (
-            <ActivityIndicator size="small" color={Colors.primary} />
+            <ActivityIndicator size="small" color={Colors.text} />
           ) : (
-            <RefreshCw size={24} color={Colors.primary} />
+            <RefreshCw size={24} color={Colors.text} />
           ),
           title: 'Check for Updates',
           subtitle:
@@ -106,7 +106,7 @@ export default function SettingsScreen() {
       title: 'Account',
       items: [
         {
-          icon: <User size={24} color={Colors.primary} />,
+          icon: <User size={24} color={Colors.text} />,
           title: 'Child Profile',
           subtitle: 'View and edit child information',
           onPress: () => {
@@ -114,7 +114,7 @@ export default function SettingsScreen() {
           },
         },
         {
-          icon: <Users size={24} color={Colors.primary} />,
+          icon: <Users size={24} color={Colors.text} />,
           title: 'Shared Access',
           subtitle: 'Manage therapist collaboration',
           onPress: () => {
@@ -127,7 +127,7 @@ export default function SettingsScreen() {
       title: 'App Settings',
       items: [
         {
-          icon: <Bell size={24} color={Colors.primary} />,
+          icon: <Bell size={24} color={Colors.text} />,
           title: 'Reminders',
           subtitle: 'Set logging reminders',
           onPress: () => {
@@ -135,7 +135,7 @@ export default function SettingsScreen() {
           },
         },
         {
-          icon: <Palette size={24} color={Colors.primary} />,
+          icon: <Palette size={24} color={Colors.text} />,
           title: 'Customization',
           subtitle: 'Themes, fonts, accessibility',
           onPress: () => {
@@ -143,7 +143,7 @@ export default function SettingsScreen() {
           },
         },
         {
-          icon: <BookOpen size={24} color={Colors.primary} />,
+          icon: <BookOpen size={24} color={Colors.text} />,
           title: 'Journal Preferences',
           subtitle: 'Customize logging categories',
           onPress: () => {
@@ -151,7 +151,7 @@ export default function SettingsScreen() {
           },
         },
         {
-          icon: <TrendingUp size={24} color={Colors.primary} />,
+          icon: <TrendingUp size={24} color={Colors.text} />,
           title: 'Progress Settings',
           subtitle: 'Configure insights',
           onPress: () => {
@@ -159,7 +159,7 @@ export default function SettingsScreen() {
           },
         },
         {
-          icon: <Bot size={24} color={Colors.primary} />,
+          icon: <Bot size={24} color={Colors.text} />,
           title: 'AI Assistant',
           subtitle: 'Customize Autumn behavior',
           onPress: () => {
@@ -176,7 +176,7 @@ export default function SettingsScreen() {
       title: 'Data & Privacy',
       items: [
         {
-          icon: <Lock size={24} color={Colors.primary} />,
+          icon: <Lock size={24} color={Colors.text} />,
           title: 'Data & Privacy',
           subtitle: 'Export, backup, security',
           onPress: () => {
@@ -189,7 +189,7 @@ export default function SettingsScreen() {
       title: 'Support',
       items: [
         {
-          icon: <BookMarked size={24} color={Colors.primary} />,
+          icon: <BookMarked size={24} color={Colors.text} />,
           title: 'Resources',
           subtitle: 'Help, tutorials, support',
           onPress: () => {
@@ -201,7 +201,7 @@ export default function SettingsScreen() {
           },
         },
         {
-          icon: <Info size={24} color={Colors.primary} />,
+          icon: <Info size={24} color={Colors.text} />,
           title: 'About',
           subtitle: 'App info and developer',
           onPress: () => {
@@ -314,7 +314,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   betaText: {
     fontSize: 12,
     fontWeight: '700' as const,
-    color: Colors.primary,
+    color: Colors.text,
   },
   content: {
     flex: 1,
@@ -404,6 +404,6 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   creatorName: {
     fontSize: 16,
     fontWeight: '700' as const,
-    color: Colors.primary,
+    color: Colors.text,
   },
 });

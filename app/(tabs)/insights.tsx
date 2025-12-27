@@ -385,10 +385,10 @@ export default function InsightsScreen() {
             disabled={isGeneratingPDF || activeChildLogs.length === 0}
           >
             {isGeneratingPDF ? (
-              <ActivityIndicator size="small" color={Colors.background} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Download size={18} color={Colors.background} />
+                <Download size={18} color="#FFFFFF" />
                 <Text style={styles.pdfButtonText}>PDF</Text>
               </>
             )}
@@ -641,7 +641,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     borderRadius: 20,
   },
   pdfButtonText: {
-    color: Colors.background,
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600' as const,
   },
@@ -821,7 +821,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   triggerRank: {
     fontSize: 14,
     fontWeight: '700' as const,
-    color: Colors.primary,
+    color: Colors.text,
   },
   triggerName: {
     fontSize: 14,
@@ -918,7 +918,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   tagRank: {
     fontSize: 16,
     fontWeight: '700' as const,
-    color: Colors.primary,
+    color: Colors.text,
   },
   tagName: {
     fontSize: 16,
@@ -954,7 +954,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   insightValue: {
     fontSize: 18,
     fontWeight: '700' as const,
-    color: Colors.primary,
+    color: Colors.text,
   },
   insightDesc: {
     fontSize: 13,
@@ -1002,6 +1002,6 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   summaryValue: {
     fontSize: 20,
     fontWeight: '600' as const,
-    color: Colors.primary,
+    color: Colors.text,
   },
 });

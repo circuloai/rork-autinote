@@ -353,9 +353,9 @@ export default function ChatScreen() {
             activeOpacity={0.7}
           >
             {sending ? (
-              <ActivityIndicator size="small" color={Colors.background} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Send size={20} color={Colors.background} />
+              <Send size={20} color="#FFFFFF" />
             )}
           </TouchableOpacity>
         </View>
@@ -440,7 +440,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   },
   suggestionText: {
     fontSize: 14,
-    color: Colors.primary,
+    color: Colors.text,
   },
   messageGroup: {
     marginBottom: 16,

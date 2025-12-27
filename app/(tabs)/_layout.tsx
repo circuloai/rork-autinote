@@ -8,16 +8,17 @@ export default function TabLayout() {
   const { preferences } = useApp();
   const Colors = getColors(preferences);
 
+  console.log('Tab layout Colors:', Colors);
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textLight,
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#9CA3AF',
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.background,
-          borderTopWidth: 1,
-          borderTopColor: Colors.border,
+          backgroundColor: '#000000',
+          borderTopWidth: 0,
         },
         tabBarLabelStyle: {
           fontSize: 12,

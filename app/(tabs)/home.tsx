@@ -221,7 +221,7 @@ export default function HomeScreen() {
             <GlassView style={styles.remindersCard} glassEffectStyle="regular">
             <View style={styles.reminderHeader}>
               <View style={styles.reminderTitleRow}>
-                <Bell size={20} color={Colors.primary} />
+                <Bell size={20} color={Colors.text} />
                 <Text style={styles.cardTitle}>Reminders</Text>
               </View>
               <TouchableOpacity 
@@ -254,12 +254,12 @@ export default function HomeScreen() {
               <View style={styles.upcomingSection}>
                 {reminders.missed.length > 0 && <View style={styles.reminderDivider} />}
                 <View style={styles.upcomingHeader}>
-                  <Clock size={16} color={Colors.primary} />
+                  <Clock size={16} color={Colors.text} />
                   <Text style={styles.upcomingTitle}>Upcoming</Text>
                 </View>
                 {reminders.upcoming.map((reminder) => (
                   <View key={reminder.id} style={styles.reminderItem}>
-                    <View style={[styles.reminderDot, { backgroundColor: Colors.primary }]} />
+                    <View style={[styles.reminderDot, { backgroundColor: Colors.text }]} />
                     <View style={styles.reminderContent}>
                       <Text style={styles.reminderLabel}>{reminder.label}</Text>
                       <Text style={styles.reminderTime}>{reminder.time}</Text>
@@ -277,7 +277,7 @@ export default function HomeScreen() {
             <View style={[styles.remindersCard, { backgroundColor: Colors.surface }]}>
               <View style={styles.reminderHeader}>
                 <View style={styles.reminderTitleRow}>
-                  <Bell size={20} color={Colors.primary} />
+                  <Bell size={20} color={Colors.text} />
                   <Text style={styles.cardTitle}>Reminders</Text>
                 </View>
                 <TouchableOpacity 
@@ -310,12 +310,12 @@ export default function HomeScreen() {
                 <View style={styles.upcomingSection}>
                   {reminders.missed.length > 0 && <View style={styles.reminderDivider} />}
                   <View style={styles.upcomingHeader}>
-                    <Clock size={16} color={Colors.primary} />
+                    <Clock size={16} color={Colors.text} />
                     <Text style={styles.upcomingTitle}>Upcoming</Text>
                   </View>
                   {reminders.upcoming.map((reminder) => (
                     <View key={reminder.id} style={styles.reminderItem}>
-                      <View style={[styles.reminderDot, { backgroundColor: Colors.primary }]} />
+                      <View style={[styles.reminderDot, { backgroundColor: Colors.text }]} />
                       <View style={styles.reminderContent}>
                         <Text style={styles.reminderLabel}>{reminder.label}</Text>
                         <Text style={styles.reminderTime}>{reminder.time}</Text>
@@ -412,8 +412,8 @@ export default function HomeScreen() {
                   activeOpacity={0.8}
                 >
                   <GlassView style={styles.glassSecondaryAction} glassEffectStyle="clear">
-                    <CalendarIcon size={20} color={Colors.primary} />
-                    <Text style={[styles.secondaryActionText, { color: Colors.primary }]}>Calendar</Text>
+                    <CalendarIcon size={20} color={Colors.text} />
+                    <Text style={[styles.secondaryActionText, { color: Colors.text }]}>Calendar</Text>
                   </GlassView>
                 </TouchableOpacity>
 
@@ -423,8 +423,8 @@ export default function HomeScreen() {
                   activeOpacity={0.8}
                 >
                   <GlassView style={styles.glassSecondaryAction} glassEffectStyle="clear">
-                    <TrendingUp size={20} color={Colors.primary} />
-                    <Text style={[styles.secondaryActionText, { color: Colors.primary }]}>Insights</Text>
+                    <TrendingUp size={20} color={Colors.text} />
+                    <Text style={[styles.secondaryActionText, { color: Colors.text }]}>Insights</Text>
                   </GlassView>
                 </TouchableOpacity>
               </>
@@ -744,7 +744,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   secondaryActionText: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: Colors.primary,
+    color: Colors.text,
   },
   aiPreview: {
     marginBottom: 24,
@@ -810,7 +810,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   upcomingTitle: {
     fontSize: 13,
     fontWeight: '600' as const,
-    color: Colors.primary,
+    color: Colors.text,
     textTransform: 'uppercase' as const,
   },
   reminderDivider: {
@@ -835,7 +835,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.text,
   },
   reminderContent: {
     flex: 1,
