@@ -289,6 +289,8 @@ export default function ChatScreen() {
         return { role, content } as { role: 'user' | 'assistant'; content: string };
       }).filter((m) => m.content.length > 0);
 
+      const systemInstructions = `You are Autumn, a supportive AI assistant for parents of autistic children. IMPORTANT: Keep responses brief and scannable - use 2-4 short paragraphs maximum. Focus on actionable insights. Avoid lengthy explanations.`;
+
       const contextBlock = `Context (use when relevant):\n${JSON.stringify({ child: childContext, recentLogs: compactLogSummary }, null, 2)}`;
 
       console.log('[Fallback] Sending request...');
@@ -298,6 +300,8 @@ export default function ChatScreen() {
 
       const assistantText = await generateText({
         messages: [
+          { role: 'user', content: systemInstructions },
+          { role: 'assistant', content: 'Understood. I\'ll keep responses concise, actionable, and easy to scan.' },
           ...history,
           { role: 'user', content: `${contextBlock}\n\nUser: ${text}` },
         ],
