@@ -238,7 +238,7 @@ ${predefinedChallengeSuggestions.join('\n')}`;
       createdAt: new Date().toISOString(),
     };
 
-    saveLog(logEntry as any);
+    saveLog(logEntry);
     Alert.alert('Success', '📝 Daily log saved!', [
       {
         text: 'OK',

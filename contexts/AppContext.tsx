@@ -2,7 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { UserProfile, LogEntry, Preferences, SharedAccess, TherapistNote } from '@/types';
+import type { UserProfile, LogEntry, Preferences, SharedAccess, TherapistNote, DailyLogEntry, MeltdownLogEntry, AnyLogEntry } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -352,31 +352,64 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
 
   const { mutate: saveLogMutate } = useMutation({
-    mutationFn: async (entry: LogEntry) => {
+    mutationFn: async (entry: AnyLogEntry) => {
+      console.log('[AppContext] Saving log entry:', entry.type, entry.id);
+      
       if (!user) {
         const current = logsQuery.data || [];
         const existingIndex = current.findIndex(e => e.id === entry.id);
         const updated = existingIndex >= 0
-          ? current.map((e, i) => i === existingIndex ? entry : e)
-          : [...current, entry];
+          ? current.map((e, i) => i === existingIndex ? entry as LogEntry : e)
+          : [...current, entry as LogEntry];
         await AsyncStorage.setItem(STORAGE_KEYS.LOG_ENTRIES, JSON.stringify(updated));
         return updated;
       }
 
-      const logData = {
+      let logData: Record<string, any> = {
         child_id: entry.childId,
         date: entry.date,
-        mood_rating: entry.moodRating,
-        positive_notes: entry.positiveNotes || null,
-        challenge_notes: entry.challengeNotes || null,
-        mood_tags: entry.moodTags || [],
         type: entry.type,
-        behaviors: entry.behaviors || null,
-        sleep_hours: entry.sleepHours || null,
-        triggers: entry.triggers || null,
-        voice_notes: entry.voiceNotes || null,
-        photos: entry.photos || null,
       };
+
+      if (entry.type === 'daily') {
+        const dailyEntry = entry as DailyLogEntry;
+        logData = {
+          ...logData,
+          mood_rating: dailyEntry.overallRating,
+          positive_notes: dailyEntry.whatWentWell || null,
+          challenge_notes: dailyEntry.whatWasChallenging || null,
+          mood_tags: dailyEntry.moodTags || [],
+          sleep_hours: dailyEntry.sleepHours || null,
+          photos: dailyEntry.photo ? [dailyEntry.photo] : null,
+        };
+      } else if (entry.type === 'meltdown') {
+        const meltdownEntry = entry as MeltdownLogEntry;
+        logData = {
+          ...logData,
+          mood_rating: meltdownEntry.moodAtEvent,
+          triggers: meltdownEntry.triggers || [],
+          behaviors: [meltdownEntry.severity, `${meltdownEntry.durationMinutes}min`],
+          challenge_notes: meltdownEntry.additionalNotes || null,
+          photos: meltdownEntry.photo ? [meltdownEntry.photo] : null,
+          mood_tags: [],
+        };
+      } else {
+        const genericEntry = entry as LogEntry;
+        logData = {
+          ...logData,
+          mood_rating: genericEntry.moodRating,
+          positive_notes: genericEntry.positiveNotes || null,
+          challenge_notes: genericEntry.challengeNotes || null,
+          mood_tags: genericEntry.moodTags || [],
+          behaviors: genericEntry.behaviors || null,
+          sleep_hours: genericEntry.sleepHours || null,
+          triggers: genericEntry.triggers || null,
+          voice_notes: genericEntry.voiceNotes || null,
+          photos: genericEntry.photos || null,
+        };
+      }
+
+      console.log('[AppContext] Log data to save:', logData);
 
       const { data: existing } = await supabase
         .from('log_entries')
@@ -384,16 +417,33 @@ export const [AppProvider, useApp] = createContextHook(() => {
         .eq('id', entry.id)
         .single();
 
+      let result;
       if (existing) {
-        await supabase.from('log_entries').update(logData).eq('id', entry.id);
+        const { data, error } = await supabase.from('log_entries').update(logData).eq('id', entry.id).select();
+        if (error) {
+          console.error('[AppContext] Error updating log:', error);
+          throw error;
+        }
+        result = data;
+        console.log('[AppContext] Log updated:', result);
       } else {
-        await supabase.from('log_entries').insert({ id: entry.id, ...logData });
+        const { data, error } = await supabase.from('log_entries').insert({ id: entry.id, ...logData }).select();
+        if (error) {
+          console.error('[AppContext] Error inserting log:', error);
+          throw error;
+        }
+        result = data;
+        console.log('[AppContext] Log inserted:', result);
       }
 
       return logsQuery.data || [];
     },
     onSuccess: () => {
+      console.log('[AppContext] Log save successful, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['logEntries', user?.id] });
+    },
+    onError: (error) => {
+      console.error('[AppContext] Log save failed:', error);
     },
   });
 
@@ -626,7 +676,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   }, [activeChildLogs]);
 
   const saveProfile = useCallback((profile: UserProfile) => saveProfileMutate(profile), [saveProfileMutate]);
-  const saveLog = useCallback((entry: LogEntry) => saveLogMutate(entry), [saveLogMutate]);
+  const saveLog = useCallback((entry: AnyLogEntry) => saveLogMutate(entry), [saveLogMutate]);
   const deleteLog = useCallback((logId: string) => deleteLogMutate(logId), [deleteLogMutate]);
   const savePreferences = useCallback((prefs: Preferences) => savePreferencesMutate(prefs), [savePreferencesMutate]);
   const saveChatHistory = useCallback((messages: any[]) => saveChatHistoryMutate(messages), [saveChatHistoryMutate]);

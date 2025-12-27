@@ -130,7 +130,7 @@ export default function MeltdownLogScreen() {
       createdAt: new Date().toISOString(),
     };
 
-    saveLog(logEntry as any);
+    saveLog(logEntry);
     Alert.alert('Success', '🌊 Meltdown log saved!', [
       {
         text: 'OK',
