@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Check, Sparkles } from 'lucide-react-native';
@@ -33,6 +33,10 @@ export default function DailyLogScreen() {
   const [challengeSuggestions, setChallengeSuggestions] = useState<string[]>([]);
   const [isGeneratingWell, setIsGeneratingWell] = useState(false);
   const [isGeneratingChallenge, setIsGeneratingChallenge] = useState(false);
+  
+  const scrollViewRef = useRef<ScrollView>(null);
+  const wellTextInputRef = useRef<View>(null);
+  const challengeTextInputRef = useRef<View>(null);
 
   const moodOptions: { value: DailyMoodRating; label: string; emoji: string; color: string }[] = [
     { value: 'great', label: 'Great Day', emoji: '😊', color: '#4CAF50' },
@@ -258,10 +262,11 @@ ${predefinedChallengeSuggestions.join('\n')}`;
 
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView 
+          ref={scrollViewRef}
           style={styles.content} 
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -306,11 +311,6 @@ ${predefinedChallengeSuggestions.join('\n')}`;
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mood Tags</Text>
-          {suggestedTags.length > 0 && (
-            <Text style={styles.suggestedTagsHint}>
-              ✨ Top suggestions based on {activeChild?.diagnosis}
-            </Text>
-          )}
           <View style={styles.tags}>
             {sortedMoodTagOptions.map((option) => (
               <TouchableOpacity
@@ -359,7 +359,7 @@ ${predefinedChallengeSuggestions.join('\n')}`;
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.section} ref={wellTextInputRef}>
           <View style={styles.sectionHeader}>
             <View style={{ flex: 1 }}>
               <Text style={styles.sectionTitle}>What went well today?</Text>
@@ -404,6 +404,17 @@ ${predefinedChallengeSuggestions.join('\n')}`;
               setWhatWentWell(text);
               generateSuggestionsForWell(text);
             }}
+            onFocus={() => {
+              setTimeout(() => {
+                wellTextInputRef.current?.measureLayout(
+                  scrollViewRef.current as any,
+                  (x, y) => {
+                    scrollViewRef.current?.scrollTo({ y: y - 100, animated: true });
+                  },
+                  () => {}
+                );
+              }, 100);
+            }}
             placeholder="Start typing for AI suggestions..."
             placeholderTextColor={Colors.textLight}
             multiline
@@ -412,7 +423,7 @@ ${predefinedChallengeSuggestions.join('\n')}`;
           />
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.section} ref={challengeTextInputRef}>
           <View style={styles.sectionHeader}>
             <View style={{ flex: 1 }}>
               <Text style={styles.sectionTitle}>What was challenging?</Text>
@@ -456,6 +467,17 @@ ${predefinedChallengeSuggestions.join('\n')}`;
             onChangeText={(text) => {
               setWhatWasChallenging(text);
               generateSuggestionsForChallenge(text);
+            }}
+            onFocus={() => {
+              setTimeout(() => {
+                challengeTextInputRef.current?.measureLayout(
+                  scrollViewRef.current as any,
+                  (x, y) => {
+                    scrollViewRef.current?.scrollTo({ y: y - 100, animated: true });
+                  },
+                  () => {}
+                );
+              }, 100);
             }}
             placeholder="Start typing for AI suggestions..."
             placeholderTextColor={Colors.textLight}
@@ -700,10 +722,5 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: 'center',
   },
-  suggestedTagsHint: {
-    fontSize: 13,
-    color: Colors.primary,
-    marginBottom: 8,
-    fontStyle: 'italic' as const,
-  },
+
 });
