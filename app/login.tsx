@@ -24,7 +24,7 @@ export default function LoginScreen() {
       if (error) {
         Alert.alert('Login Error', error.message);
       } else {
-        router.replace('/(tabs)/home');
+        router.replace('/(tabs)/home' as any);
       }
     } catch {
       Alert.alert('Error', 'An unexpected error occurred');
@@ -108,7 +108,7 @@ export default function LoginScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don&apos;t have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/onboarding')}>
+            <TouchableOpacity onPress={() => router.push('/onboarding' as any)}>
               <Text style={styles.footerLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>

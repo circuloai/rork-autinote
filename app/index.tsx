@@ -12,7 +12,7 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)/home' as any);
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -25,15 +25,15 @@ export default function WelcomeScreen() {
   }
 
   const handleGetStarted = () => {
-    router.push('/onboarding');
+    router.push('/onboarding' as any);
   };
 
   const handleLogin = () => {
-    router.push('/login');
+    router.push('/login' as any);
   };
 
   const handleExplore = () => {
-    router.push('/(tabs)/home');
+    router.push('/(tabs)/home' as any);
   };
 
   return (

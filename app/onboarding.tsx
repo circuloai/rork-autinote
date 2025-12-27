@@ -190,7 +190,7 @@ export default function OnboardingScreen() {
           Alert.alert(
             'Account Exists',
             'An account with this email already exists. Please log in instead.',
-            [{ text: 'Go to Login', onPress: () => router.push('/login') }]
+            [{ text: 'Go to Login', onPress: () => router.push('/login' as any) }]
           );
         } else {
           Alert.alert('Sign Up Error', error.message);
@@ -205,7 +205,7 @@ export default function OnboardingScreen() {
         Alert.alert(
           'Check Your Email',
           'We\'ve sent a confirmation link to your email. Please confirm your email and then log in.',
-          [{ text: 'OK', onPress: () => router.push('/login') }]
+          [{ text: 'OK', onPress: () => router.push('/login' as any) }]
         );
         setIsCreatingAccount(false);
         return;

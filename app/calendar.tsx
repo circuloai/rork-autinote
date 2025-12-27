@@ -106,7 +106,7 @@ export default function CalendarScreen() {
           onPress={() => {
             const selectedDate = new Date(selectedYear, selectedMonth, day);
             router.push({
-              pathname: '/log/daily',
+              pathname: '/log/daily' as any,
               params: { date: selectedDate.toISOString() }
             });
           }}
