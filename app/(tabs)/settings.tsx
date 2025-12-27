@@ -74,10 +74,9 @@ export default function SettingsScreen() {
           text: 'Log Out',
           style: 'destructive',
           onPress: () => {
-            logout();
-            setTimeout(() => {
+            logout(() => {
               router.replace('/' as any);
-            }, 100);
+            });
           },
         },
       ]

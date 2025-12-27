@@ -713,7 +713,17 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const savePreferences = useCallback((prefs: Preferences) => savePreferencesMutate(prefs), [savePreferencesMutate]);
   const saveChatHistory = useCallback((messages: any[]) => saveChatHistoryMutate(messages), [saveChatHistoryMutate]);
   const clearChatHistory = useCallback(() => clearChatHistoryMutate(), [clearChatHistoryMutate]);
-  const logout = useCallback(() => logoutMutate(), [logoutMutate]);
+  const logout = useCallback((onSuccess?: () => void) => {
+    logoutMutate(undefined, {
+      onSuccess: () => {
+        queryClient.clear();
+        setIsAuthenticated(false);
+        if (onSuccess) {
+          onSuccess();
+        }
+      },
+    });
+  }, [logoutMutate, queryClient]);
   const saveSharedAccess = useCallback((access: SharedAccess) => saveSharedAccessMutate(access), [saveSharedAccessMutate]);
   const deleteSharedAccess = useCallback((accessId: string) => deleteSharedAccessMutate(accessId), [deleteSharedAccessMutate]);
   const saveTherapistNote = useCallback((note: TherapistNote) => saveTherapistNoteMutate(note), [saveTherapistNoteMutate]);
