@@ -202,7 +202,9 @@ export default function ChatScreen() {
     }),
   }), [activeChild, activeChildLogs]);
 
-  const { messages, error, sendMessage, setMessages } = useRorkAgent({ tools });
+  const { messages, error, sendMessage, setMessages } = useRorkAgent({ 
+    tools: activeChild ? tools : {},
+  });
 
   const appendLocalTextMessage = useCallback((role: ChatRole, text: string) => {
     const msg: ChatMessage = {
@@ -313,6 +315,12 @@ export default function ChatScreen() {
         console.error('Error JSON:', JSON.stringify(error, null, 2));
       }
       console.error('==================');
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (/internal server error/i.test(errorMessage)) {
+        console.warn('[Chat] Detected internal server error, switching to fallback mode');
+        setIsFallbackMode(true);
+      }
     }
   }, [error]);
 
