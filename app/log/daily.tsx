@@ -259,13 +259,13 @@ ${predefinedChallengeSuggestions.join('\n')}`;
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={0}
       >
         <ScrollView 
           style={styles.content} 
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
         >
         {existingLogsForDate.length > 0 && (
           <View style={styles.existingLogsNotice}>
@@ -332,11 +332,6 @@ ${predefinedChallengeSuggestions.join('\n')}`;
                 >
                   {option.label}
                 </Text>
-                {option.suggested && !selectedTags.includes(option.value) && (
-                  <View style={styles.suggestedBadge}>
-                    <Text style={styles.suggestedBadgeText}>✨</Text>
-                  </View>
-                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -605,8 +600,8 @@ const styles = StyleSheet.create({
     position: 'relative' as const,
   },
   tagSuggested: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary + '40',
+    borderWidth: 1,
+    borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
   tagEmoji: {
@@ -710,19 +705,5 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginBottom: 8,
     fontStyle: 'italic' as const,
-  },
-  suggestedBadge: {
-    position: 'absolute' as const,
-    top: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  suggestedBadgeText: {
-    fontSize: 10,
   },
 });
