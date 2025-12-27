@@ -249,8 +249,14 @@ export default function ChatScreen() {
   const fallbackSend = useCallback(async (text: string) => {
     const toolkitUrl = process.env.EXPO_PUBLIC_TOOLKIT_URL;
 
+    console.log('=== Fallback Send Started ===');
+    console.log('Toolkit URL:', toolkitUrl);
+    console.log('User input:', text);
+    console.log('============================');
+
     if (!toolkitUrl) {
-      throw new Error('AI service is not configured');
+      console.error('[Fallback] EXPO_PUBLIC_TOOLKIT_URL is not set');
+      throw new Error('AI service is not configured. Please check environment variables.');
     }
 
     setFallbackError(null);
@@ -285,13 +291,10 @@ export default function ChatScreen() {
 
       const contextBlock = `Context (use when relevant):\n${JSON.stringify({ child: childContext, recentLogs: compactLogSummary }, null, 2)}`;
 
-      console.log('=== Fallback Chat Debug ===');
-      console.log('toolkitUrl set:', !!toolkitUrl);
-      console.log('history messages:', history.length);
-      console.log('recentLogs:', recentLogs.length);
-      console.log('user input length:', text.length);
-      console.log('context length:', contextBlock.length);
-      console.log('===========================');
+      console.log('[Fallback] Sending request...');
+      console.log('[Fallback] History messages:', history.length);
+      console.log('[Fallback] Recent logs:', recentLogs.length);
+      console.log('[Fallback] Context size:', contextBlock.length, 'chars');
 
       const assistantText = await generateText({
         messages: [
@@ -300,14 +303,23 @@ export default function ChatScreen() {
         ],
       });
 
+      console.log('[Fallback] Response received:', assistantText?.length || 0, 'chars');
+      
+      if (!assistantText || typeof assistantText !== 'string') {
+        throw new Error('Invalid response from AI service');
+      }
+
       return assistantText;
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
-      console.error('fallbackSend error:', e);
+      console.error('[Fallback] Error details:', e);
+      console.error('[Fallback] Error type:', typeof e);
+      console.error('[Fallback] Error message:', msg);
       setFallbackError(msg);
       throw e;
     } finally {
       setFallbackSending(false);
+      console.log('[Fallback] Send completed');
     }
   }, [activeChild, activeChildLogs, messages]);
 
@@ -367,11 +379,16 @@ export default function ChatScreen() {
     setInput('');
 
     if (isFallbackMode) {
+      console.log('[Chat] Using fallback mode');
       appendLocalTextMessage('user', text);
       try {
+        console.log('[Chat] Calling fallbackSend...');
         const assistant = await fallbackSend(text);
+        console.log('[Chat] Got response, appending to messages');
         appendLocalTextMessage('assistant', assistant);
+        console.log('[Chat] Fallback send successful');
       } catch (err) {
+        console.error('[Chat] Fallback failed:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unable to connect to AI service';
         Alert.alert('Connection Error', `${errorMessage}. Please try again.`, [{ text: 'OK' }]);
       }
