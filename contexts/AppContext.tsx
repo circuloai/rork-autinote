@@ -421,7 +421,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
       if (existing) {
         const { data, error } = await supabase.from('log_entries').update(logData).eq('id', entry.id).select();
         if (error) {
-          console.error('[AppContext] Error updating log:', error);
+          console.error('[AppContext] Error updating log:', JSON.stringify(error, null, 2));
+          console.error('[AppContext] Error details:', error.message, error.details, error.hint);
           throw error;
         }
         result = data;
@@ -429,7 +430,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
       } else {
         const { data, error } = await supabase.from('log_entries').insert({ id: entry.id, ...logData }).select();
         if (error) {
-          console.error('[AppContext] Error inserting log:', error);
+          console.error('[AppContext] Error inserting log:', JSON.stringify(error, null, 2));
+          console.error('[AppContext] Error details:', error.message, error.details, error.hint);
           throw error;
         }
         result = data;
@@ -442,8 +444,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
       console.log('[AppContext] Log save successful, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['logEntries', user?.id] });
     },
-    onError: (error) => {
-      console.error('[AppContext] Log save failed:', error);
+    onError: (error: any) => {
+      console.error('[AppContext] Log save failed:', JSON.stringify(error, null, 2));
+      console.error('[AppContext] Error details:', error?.message, error?.details, error?.hint);
+      console.error('[AppContext] Error stack:', error?.stack);
     },
   });
 
