@@ -4,8 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, Sparkles, Trash2 } from 'lucide-react-native';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { useRorkAgent, createRorkTool, generateText } from '@rork-ai/toolkit-sdk';
-import { z } from 'zod';
+import { generateText } from '@rork-ai/toolkit-sdk';
 import type { AnyLogEntry, DailyLogEntry, MeltdownLogEntry, LogEntry, MoodTag } from '@/types';
 
 type ChatRole = 'user' | 'assistant';
@@ -46,9 +45,8 @@ export default function ChatScreen() {
   const Colors = useMemo(() => getColors(preferences), [preferences]);
   const styles = useMemo(() => createStyles(Colors), [Colors]);
   const [input, setInput] = useState<string>('');
-  const [isFallbackMode, setIsFallbackMode] = useState<boolean>(false);
-  const [fallbackSending, setFallbackSending] = useState<boolean>(false);
-  const [fallbackError, setFallbackError] = useState<string | null>(null);
+  const [sending, setSending] = useState<boolean>(false);
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const getMoodRating = (log: AnyLogEntry): string => {
@@ -74,193 +72,30 @@ export default function ChatScreen() {
     return (log as LogEntry).challengeNotes || '';
   };
 
-  const tools = useMemo(() => ({
-    getChildProfile: createRorkTool({
-      description: 'Get child profile info including diagnosis, triggers, age, school',
-      zodSchema: z.object({}),
-      execute: () => {
-        try {
-          if (!activeChild) return JSON.stringify({ error: 'No profile' });
-          return JSON.stringify({
-            name: activeChild.name || 'Unknown',
-            age: activeChild.age || 0,
-            diagnosis: activeChild.diagnosis || 'Not specified',
-            school: activeChild.schoolName || 'Not specified',
-            grade: activeChild.gradeLevel || 'Not specified',
-            triggers: activeChild.commonTriggers || [],
-          });
-        } catch (error) {
-          console.error('getChildProfile error:', error);
-          return JSON.stringify({ error: 'Failed to get profile' });
-        }
-      },
-    }),
-    getLogsSummary: createRorkTool({
-      description: 'Get a comprehensive summary of log entries for the child. Use this to analyze patterns, moods, and trends.',
-      zodSchema: z.object({
-        days: z.number().describe('Number of recent days to summarize').optional(),
-      }),
-      execute: (input) => {
-        try {
-          const days = input.days || 30;
-          const recentLogs = (activeChildLogs || []).slice(-days);
-          
-          const moodCounts = recentLogs.reduce((acc, log) => {
-            if (log) {
-              const mood = getMoodRating(log);
-              acc[mood] = (acc[mood] || 0) + 1;
-            }
-            return acc;
-          }, {} as Record<string, number>);
-          
-          const tagCounts = recentLogs.reduce((acc, log) => {
-            if (log) {
-              getMoodTags(log).forEach((tag: string) => {
-                if (tag) {
-                  acc[tag] = (acc[tag] || 0) + 1;
-                }
-              });
-            }
-            return acc;
-          }, {} as Record<string, number>);
-          
-          return JSON.stringify({
-            period: `Last ${days} days`,
-            totalLogs: recentLogs.length,
-            moodDistribution: moodCounts,
-            commonTags: tagCounts,
-            recentEntries: recentLogs.slice(-7).map(l => ({
-              date: l?.date || 'Unknown',
-              mood: l ? getMoodRating(l) : 'Unknown',
-              tags: l ? getMoodTags(l) : [],
-              positiveNotes: l ? getPositiveNotes(l) : '',
-              challengeNotes: l ? getChallengeNotes(l) : '',
-            })),
-          });
-        } catch (error) {
-          console.error('getLogsSummary error:', error);
-          return JSON.stringify({ error: 'Failed to get logs summary' });
-        }
-      },
-    }),
-    getDetailedLog: createRorkTool({
-      description: 'Get detailed information about a specific log entry by date',
-      zodSchema: z.object({
-        date: z.string().describe('Date of the log entry in ISO format (YYYY-MM-DD)'),
-      }),
-      execute: (input) => {
-        try {
-          const log = (activeChildLogs || []).find(l => l?.date === input.date);
-          if (!log) {
-            return JSON.stringify({ error: 'No log found for this date' });
-          }
-          return JSON.stringify({
-            date: log.date || 'Unknown',
-            mood: getMoodRating(log),
-            tags: getMoodTags(log),
-            positiveNotes: getPositiveNotes(log),
-            challengeNotes: getChallengeNotes(log),
-            sleepHours: log.type === 'daily' ? (log as DailyLogEntry).sleepHours || 0 : (log as LogEntry).sleepHours || 0,
-            behaviors: log.type === 'meltdown' ? [(log as MeltdownLogEntry).severity, `${(log as MeltdownLogEntry).durationMinutes}min`] : [],
-            triggers: log.type === 'meltdown' ? (log as MeltdownLogEntry).triggers : [],
-          });
-        } catch (error) {
-          console.error('getDetailedLog error:', error);
-          return JSON.stringify({ error: 'Failed to get log details' });
-        }
-      },
-    }),
-    findPatterns: createRorkTool({
-      description: 'Analyze logs to identify patterns in moods, triggers, and behaviors',
-      zodSchema: z.object({
-        category: z.enum(['moods', 'tags', 'triggers', 'behaviors']).describe('Category to analyze for patterns'),
-      }),
-      execute: (input) => {
-        try {
-          const logs = (activeChildLogs || []).slice(-30);
-          
-          if (input.category === 'tags') {
-            const tagsByMood: Record<string, string[]> = {};
-            logs.forEach(log => {
-              if (log) {
-                const mood = getMoodRating(log);
-                if (!tagsByMood[mood]) {
-                  tagsByMood[mood] = [];
-                }
-                tagsByMood[mood].push(...getMoodTags(log));
-              }
-            });
-            
-            const tagFrequency: Record<string, Record<string, number>> = {};
-            Object.entries(tagsByMood).forEach(([mood, tags]) => {
-              tagFrequency[mood] = tags.reduce((acc, tag) => {
-                if (tag) {
-                  acc[tag] = (acc[tag] || 0) + 1;
-                }
-                return acc;
-              }, {} as Record<string, number>);
-            });
-            
-            return JSON.stringify({
-              category: 'Mood Tags Patterns',
-              analysis: tagFrequency,
-              insight: 'Shows which emotional tags are associated with different mood ratings',
-            });
-          }
-          
-          if (input.category === 'moods') {
-            const moodTrend = logs.map(l => ({
-              date: l?.date || 'Unknown',
-              mood: l ? getMoodRating(l) : 'Unknown',
-            }));
-            
-            return JSON.stringify({
-              category: 'Mood Trends',
-              trend: moodTrend,
-              insight: 'Chronological progression of mood ratings',
-            });
-          }
-          
-          return JSON.stringify({ message: 'Analysis in progress' });
-        } catch (error) {
-          console.error('findPatterns error:', error);
-          return JSON.stringify({ error: 'Failed to analyze patterns' });
-        }
-      },
-    }),
-  }), [activeChild, activeChildLogs]);
-
-  const { messages, error, sendMessage, setMessages } = useRorkAgent({ 
-    tools: activeChild ? tools : {},
-  });
-
   const appendLocalTextMessage = useCallback((role: ChatRole, text: string) => {
     const msg: ChatMessage = {
       id: makeId(role),
       role,
       parts: [{ type: 'text', text }],
     };
-    setMessages((prev: any[]) => {
-      const next = [...(prev || []), msg];
-      return next;
-    });
-  }, [setMessages]);
+    setLocalMessages((prev) => [...prev, msg]);
+    return msg;
+  }, []);
 
-  const fallbackSend = useCallback(async (text: string) => {
+  const sendChat = useCallback(async (text: string) => {
     const toolkitUrl = process.env.EXPO_PUBLIC_TOOLKIT_URL;
 
-    console.log('=== Fallback Send Started ===');
+    console.log('=== Chat Send Started ===');
     console.log('Toolkit URL:', toolkitUrl);
     console.log('User input:', text);
-    console.log('============================');
+    console.log('===========================');
 
     if (!toolkitUrl) {
-      console.error('[Fallback] EXPO_PUBLIC_TOOLKIT_URL is not set');
+      console.error('[Chat] EXPO_PUBLIC_TOOLKIT_URL is not set');
       throw new Error('AI service is not configured. Please check environment variables.');
     }
 
-    setFallbackError(null);
-    setFallbackSending(true);
+    setSending(true);
 
     try {
       const childContext = activeChild
@@ -283,9 +118,9 @@ export default function ChatScreen() {
         challengeNotes: l ? getChallengeNotes(l).slice(0, 240) : '',
       }));
 
-      const history = (messages || []).slice(-10).map((m: any) => {
-        const role = m?.role === 'user' ? 'user' : 'assistant';
-        const content = toPlainTextFromMessageParts(m?.parts);
+      const history = localMessages.slice(-10).map((m) => {
+        const role = m.role === 'user' ? 'user' : 'assistant';
+        const content = toPlainTextFromMessageParts(m.parts);
         return { role, content } as { role: 'user' | 'assistant'; content: string };
       }).filter((m) => m.content.length > 0);
 
@@ -293,10 +128,10 @@ export default function ChatScreen() {
 
       const contextBlock = `Context (use when relevant):\n${JSON.stringify({ child: childContext, recentLogs: compactLogSummary }, null, 2)}`;
 
-      console.log('[Fallback] Sending request...');
-      console.log('[Fallback] History messages:', history.length);
-      console.log('[Fallback] Recent logs:', recentLogs.length);
-      console.log('[Fallback] Context size:', contextBlock.length, 'chars');
+      console.log('[Chat] Sending request...');
+      console.log('[Chat] History messages:', history.length);
+      console.log('[Chat] Recent logs:', recentLogs.length);
+      console.log('[Chat] Context size:', contextBlock.length, 'chars');
 
       const assistantText = await generateText({
         messages: [
@@ -307,7 +142,7 @@ export default function ChatScreen() {
         ],
       });
 
-      console.log('[Fallback] Response received:', assistantText?.length || 0, 'chars');
+      console.log('[Chat] Response received:', assistantText?.length || 0, 'chars');
       
       if (!assistantText || typeof assistantText !== 'string') {
         throw new Error('Invalid response from AI service');
@@ -316,166 +151,66 @@ export default function ChatScreen() {
       return assistantText;
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
-      console.error('[Fallback] Error details:', e);
-      console.error('[Fallback] Error type:', typeof e);
-      console.error('[Fallback] Error message:', msg);
-      setFallbackError(msg);
+      console.error('[Chat] Error details:', e);
+      console.error('[Chat] Error type:', typeof e);
+      console.error('[Chat] Error message:', msg);
       throw e;
     } finally {
-      setFallbackSending(false);
-      console.log('[Fallback] Send completed');
+      setSending(false);
+      console.log('[Chat] Send completed');
     }
-  }, [activeChild, activeChildLogs, messages]);
+  }, [activeChild, activeChildLogs, localMessages]);
 
   useEffect(() => {
-    if (chatHistory && chatHistory.length > 0 && messages.length === 0) {
-      setMessages(chatHistory);
+    if (chatHistory && chatHistory.length > 0 && localMessages.length === 0) {
+      setLocalMessages(chatHistory);
     }
-  }, [chatHistory, messages.length, setMessages]);
+  }, [chatHistory, localMessages.length]);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      saveChatHistory(messages);
+    if (localMessages.length > 0) {
+      saveChatHistory(localMessages);
     }
-  }, [messages, saveChatHistory]);
+  }, [localMessages, saveChatHistory]);
 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (localMessages.length > 0) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages.length]);
-
-  useEffect(() => {
-    if (error && !isFallbackMode) {
-      console.error('=== Chat Error ===');
-      console.error('Error type:', typeof error);
-      console.error('Error:', error);
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown');
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
-      if (typeof error === 'object' && error !== null) {
-        console.error('Error keys:', Object.keys(error));
-        console.error('Error JSON:', JSON.stringify(error, null, 2));
-      }
-      console.error('==================');
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (/internal server error/i.test(errorMessage) || /500/.test(errorMessage) || /fetch failed/i.test(errorMessage)) {
-        console.warn('[Chat] Detected server error, switching to fallback mode');
-        setIsFallbackMode(true);
-      }
-    }
-  }, [error, isFallbackMode]);
+  }, [localMessages.length]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || sending) return;
 
     console.log('=== Chat Send Debug ===');
-    console.log('isFallbackMode:', isFallbackMode);
     console.log('Input length:', text.length);
     console.log('Active Child:', activeChild?.id);
-    console.log('Message count:', messages.length);
-    console.log('Tools count:', Object.keys(tools).length);
+    console.log('Message count:', localMessages.length);
     console.log('======================');
 
     setInput('');
-
-    if (isFallbackMode) {
-      console.log('[Chat] Using fallback mode');
-      appendLocalTextMessage('user', text);
-      try {
-        console.log('[Chat] Calling fallbackSend...');
-        const assistant = await fallbackSend(text);
-        console.log('[Chat] Got response, appending to messages');
-        appendLocalTextMessage('assistant', assistant);
-        console.log('[Chat] Fallback send successful');
-      } catch (err) {
-        console.error('[Chat] Fallback failed:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unable to connect to AI service';
-        Alert.alert('Connection Error', `${errorMessage}. Please try again.`, [{ text: 'OK' }]);
-      }
-      return;
-    }
+    appendLocalTextMessage('user', text);
 
     try {
-      await sendMessage(text);
-      console.log('[Chat] Message sent successfully');
+      const assistant = await sendChat(text);
+      appendLocalTextMessage('assistant', assistant);
+      console.log('[Chat] Send successful');
     } catch (err) {
       console.error('=== Send Error ===');
       console.error('Error:', err);
-      console.error('Error type:', typeof err);
-      console.error('Error instanceof Error:', err instanceof Error);
-      if (err && typeof err === 'object') {
-        console.error('Error keys:', Object.keys(err));
-        console.error('Error stringified:', JSON.stringify(err, null, 2));
-      }
       console.error('==================');
-
-      const errorMessage = err instanceof Error
-        ? err.message
-        : typeof err === 'string'
-          ? err
-          : typeof err === 'object' && err && 'message' in err
-            ? String((err as any).message)
-            : 'Unable to connect to AI service';
-
-      const isConnectionError = 
-        /internal server error/i.test(errorMessage) || 
-        /500/.test(errorMessage) ||
-        /fetch failed/i.test(errorMessage) ||
-        /could not connect/i.test(errorMessage) ||
-        /network/i.test(errorMessage) ||
-        /timeout/i.test(errorMessage) ||
-        /ECONNREFUSED/i.test(errorMessage) ||
-        /unable to connect/i.test(errorMessage) ||
-        /agent.*error/i.test(errorMessage);
-
-      console.log('[Chat] Is connection error:', isConnectionError);
-      console.log('[Chat] Error message:', errorMessage);
-
-      if (isConnectionError) {
-        console.warn('[Chat] Switching to fallback mode due to connection error');
-        setIsFallbackMode(true);
-        appendLocalTextMessage('user', text);
-        try {
-          const assistant = await fallbackSend(text);
-          appendLocalTextMessage('assistant', assistant);
-          return;
-        } catch (fallbackErr) {
-          console.error('[Chat] Fallback also failed:', fallbackErr);
-          Alert.alert(
-            'Connection Error', 
-            'Unable to connect to AI service. Please check your internet connection and try again.', 
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-      }
-
+      
+      const errorMessage = err instanceof Error ? err.message : 'Unable to connect to AI service';
       Alert.alert(
-        'Error', 
-        'Something went wrong. Please try again.', 
-        [
-          { text: 'OK' },
-          { 
-            text: 'Try Basic Mode', 
-            onPress: () => {
-              setIsFallbackMode(true);
-              appendLocalTextMessage('user', text);
-              fallbackSend(text).then(assistant => {
-                appendLocalTextMessage('assistant', assistant);
-              }).catch((err) => {
-                console.error('[Chat] Basic mode failed:', err);
-                Alert.alert('Error', 'AI service is currently unavailable.');
-              });
-            }
-          }
-        ]
+        'Connection Error', 
+        `${errorMessage}. Please check your internet connection and try again.`, 
+        [{ text: 'OK' }]
       );
     }
-  }, [activeChild?.id, appendLocalTextMessage, fallbackSend, input, isFallbackMode, messages.length, sendMessage, tools]);
+  }, [activeChild?.id, appendLocalTextMessage, sendChat, input, localMessages.length, sending]);
 
   const handleClearHistory = useCallback(() => {
     Alert.alert(
@@ -488,12 +223,12 @@ export default function ChatScreen() {
           style: 'destructive',
           onPress: () => {
             clearChatHistory();
-            setMessages([]);
+            setLocalMessages([]);
           },
         },
       ]
     );
-  }, [clearChatHistory, setMessages]);
+  }, [clearChatHistory]);
 
   const suggestedQuestions = activeChild?.diagnosis
     ? [
@@ -517,10 +252,10 @@ export default function ChatScreen() {
             <Sparkles size={32} color={Colors.secondary} />
             <View>
               <Text style={styles.title}>Autumn</Text>
-              <Text style={styles.subtitle}>AI Assistant{isFallbackMode ? ' (basic mode)' : ' with Memory'}</Text>
+              <Text style={styles.subtitle}>AI Assistant</Text>
             </View>
           </View>
-          {messages.length > 0 && (
+          {localMessages.length > 0 && (
             <TouchableOpacity
               onPress={handleClearHistory}
               style={styles.clearButton}
@@ -543,7 +278,7 @@ export default function ChatScreen() {
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
         >
-          {messages.length === 0 && (
+          {localMessages.length === 0 && (
             <View style={styles.welcome}>
               <Text style={styles.welcomeText}>
                 Hi! I&apos;m Autumn, your AI assistant{activeChild?.name ? ` with full knowledge of ${activeChild.name}'s profile and history` : ''}. {activeChild?.name && activeChild?.age ? `I understand ${activeChild.name} is ${activeChild.age} years old` : ''}{activeChild?.diagnosis ? ` with ${activeChild.diagnosis}` : ''}{activeChild ? ', and I' : 'I'}&apos;m here to provide personalized support.
@@ -565,7 +300,7 @@ export default function ChatScreen() {
             </View>
           )}
 
-          {messages.map((message) => (
+          {localMessages.map((message) => (
             <View key={message.id} style={styles.messageGroup}>
               {message.parts.map((part, partIndex) => {
                 if (part.type === 'text') {
@@ -587,59 +322,13 @@ export default function ChatScreen() {
                       </Text>
                     </View>
                   );
-                } else if (part.type === 'tool') {
-                  if (part.state === 'input-streaming' || part.state === 'input-available') {
-                    return (
-                      <View key={`${message.id}-${partIndex}`} style={styles.toolBubble}>
-                        <ActivityIndicator size="small" color={Colors.secondary} />
-                        <Text style={styles.toolText}>Analyzing your data...</Text>
-                      </View>
-                    );
-                  } else if (part.state === 'output-error') {
-                    return (
-                      <View key={`${message.id}-${partIndex}`} style={styles.errorBubble}>
-                        <Text style={styles.errorText}>Error: {part.errorText}</Text>
-                      </View>
-                    );
-                  }
                 }
                 return null;
               })}
             </View>
           ))}
 
-          {(error && !isFallbackMode || fallbackError) && (
-            <View style={styles.errorBubble}>
-              <Text style={styles.errorText}>{isFallbackMode ? 'Switched to basic mode due to connectivity issues.' : 'Something went wrong. Please try again.'}</Text>
-              {!isFallbackMode && (
-                <Text style={[styles.errorText, { fontSize: 12, marginTop: 8, opacity: 0.8 }]}>
-                  {fallbackError
-                    ? fallbackError
-                    : typeof error === 'object' && error !== null && 'message' in error
-                      ? String((error as any).message)
-                      : typeof error === 'string'
-                        ? error
-                        : 'Unknown error occurred'}
-                </Text>
-              )}
-              {isFallbackMode && (
-                <TouchableOpacity
-                  testID="chatExitBasicMode"
-                  style={[styles.suggestionButton, { marginTop: 12 }]}
-                  onPress={() => {
-                    setIsFallbackMode(false);
-                    setFallbackError(null);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.suggestionText}>Try full AI mode again</Text>
-                </TouchableOpacity>
-              )}
-              {__DEV__ && error && (
-                <Text style={[styles.errorText, { fontSize: 11, marginTop: 8, fontFamily: 'monospace' }]}>Debug: {JSON.stringify(error, null, 2)}</Text>
-              )}
-            </View>
-          )}
+
 
           <View style={{ height: 20 }} />
         </ScrollView>
@@ -650,20 +339,20 @@ export default function ChatScreen() {
             style={styles.input}
             value={input}
             onChangeText={setInput}
-            placeholder={isFallbackMode ? "Ask (basic mode)…" : "Ask me anything..."}
+            placeholder="Ask me anything..."
             placeholderTextColor={Colors.textLight}
             multiline
             maxLength={500}
-            editable={!fallbackSending}
+            editable={!sending}
           />
           <TouchableOpacity
             testID="chatSendButton"
-            style={[styles.sendButton, (!input.trim() || fallbackSending) && styles.sendButtonDisabled]}
+            style={[styles.sendButton, (!input.trim() || sending) && styles.sendButtonDisabled]}
             onPress={handleSend}
-            disabled={!input.trim() || fallbackSending}
+            disabled={!input.trim() || sending}
             activeOpacity={0.7}
           >
-            {fallbackSending ? (
+            {sending ? (
               <ActivityIndicator size="small" color={Colors.background} />
             ) : (
               <Send size={20} color={Colors.background} />
