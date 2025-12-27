@@ -61,12 +61,21 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     };
   }, [queryClient]);
 
-  const signUp = async (email: string, password: string): Promise<{ error: AuthError | null }> => {
-    const { error } = await supabase.auth.signUp({
+  const signUp = async (email: string, password: string): Promise<{ error: AuthError | null; user: User | null; session: Session | null; needsEmailConfirmation: boolean }> => {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
-    return { error };
+    
+    const needsEmailConfirmation = !error && !!data.user && !data.session;
+    console.log('[Auth] SignUp result - user:', data.user?.id, 'session:', !!data.session, 'needsConfirmation:', needsEmailConfirmation);
+    
+    return { 
+      error, 
+      user: data.user ?? null, 
+      session: data.session ?? null,
+      needsEmailConfirmation 
+    };
   };
 
   const signIn = async (email: string, password: string): Promise<{ error: AuthError | null }> => {

@@ -182,25 +182,52 @@ export default function OnboardingScreen() {
     setIsCreatingAccount(true);
     try {
       console.log('[Onboarding] Starting signup process...');
-      const { error } = await signUp(caregiverEmail.trim(), caregiverPassword);
+      const { error, user, session, needsEmailConfirmation } = await signUp(caregiverEmail.trim(), caregiverPassword);
+      
       if (error) {
-        Alert.alert('Sign Up Error', error.message);
+        // Check if user already exists
+        if (error.message.includes('already registered')) {
+          Alert.alert(
+            'Account Exists',
+            'An account with this email already exists. Please log in instead.',
+            [{ text: 'Go to Login', onPress: () => router.push('/login') }]
+          );
+        } else {
+          Alert.alert('Sign Up Error', error.message);
+        }
         setIsCreatingAccount(false);
         return;
       }
 
-      console.log('[Onboarding] Signup successful, waiting for session...');
+      // If email confirmation is required, inform the user
+      if (needsEmailConfirmation) {
+        console.log('[Onboarding] Email confirmation required, user created:', user?.id);
+        Alert.alert(
+          'Check Your Email',
+          'We\'ve sent a confirmation link to your email. Please confirm your email and then log in.',
+          [{ text: 'OK', onPress: () => router.push('/login') }]
+        );
+        setIsCreatingAccount(false);
+        return;
+      }
+
+      console.log('[Onboarding] Signup successful with immediate session');
       
-      let attempts = 0;
-      const maxAttempts = 20;
-      let userId: string | null = null;
+      // Use the user ID from the signup response if available
+      let userId = user?.id ?? session?.user?.id ?? null;
       
-      while (attempts < maxAttempts && !userId) {
-        await new Promise(resolve => setTimeout(resolve, 250));
-        const { data: { session } } = await supabase.auth.getSession();
-        userId = session?.user?.id ?? null;
-        attempts++;
-        console.log(`[Onboarding] Checking session attempt ${attempts}, userId: ${userId}`);
+      // If no immediate user ID, wait for session
+      if (!userId) {
+        let attempts = 0;
+        const maxAttempts = 20;
+        
+        while (attempts < maxAttempts && !userId) {
+          await new Promise(resolve => setTimeout(resolve, 250));
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          userId = currentSession?.user?.id ?? null;
+          attempts++;
+          console.log(`[Onboarding] Checking session attempt ${attempts}, userId: ${userId}`);
+        }
       }
 
       if (!userId) {
