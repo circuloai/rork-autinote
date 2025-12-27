@@ -105,22 +105,50 @@ export const [AppProvider, useApp] = createContextHook(() => {
           return [];
         }
 
-        return (data || []).map((log: any) => ({
-          id: log.id,
-          childId: log.child_id,
-          date: log.date,
-          moodRating: log.mood_rating as any,
-          positiveNotes: log.positive_notes || undefined,
-          challengeNotes: log.challenge_notes || undefined,
-          moodTags: log.mood_tags || [],
-          type: log.type as any,
-          behaviors: log.behaviors || undefined,
-          sleepHours: log.sleep_hours || undefined,
-          triggers: log.triggers || undefined,
-          voiceNotes: log.voice_notes || undefined,
-          photos: log.photos || undefined,
-          createdAt: log.created_at,
-        }));
+        return (data || []).map((log: any) => {
+          const baseLog = {
+            id: log.id,
+            childId: log.child_id,
+            date: log.date,
+            moodRating: log.mood_rating as any,
+            positiveNotes: log.positive_notes || undefined,
+            challengeNotes: log.challenge_notes || undefined,
+            moodTags: log.mood_tags || [],
+            type: log.type as any,
+            behaviors: log.behaviors || undefined,
+            sleepHours: log.sleep_hours || undefined,
+            triggers: log.triggers || undefined,
+            voiceNotes: log.voice_notes || undefined,
+            photos: log.photos || undefined,
+            createdAt: log.created_at,
+          };
+
+          if (log.type === 'daily') {
+            return {
+              ...baseLog,
+              overallRating: log.mood_rating,
+              whatWentWell: log.positive_notes || undefined,
+              whatWasChallenging: log.challenge_notes || undefined,
+              photo: log.photos?.[0] || undefined,
+            } as DailyLogEntry;
+          } else if (log.type === 'meltdown') {
+            const behaviors = log.behaviors || [];
+            const severity = behaviors.find((b: string) => ['mild', 'moderate', 'severe'].includes(b)) || 'moderate';
+            const durationMatch = behaviors.find((b: string) => b.includes('min'));
+            const durationMinutes = durationMatch ? parseInt(durationMatch) : 0;
+            
+            return {
+              ...baseLog,
+              moodAtEvent: log.mood_rating,
+              severity,
+              durationMinutes,
+              additionalNotes: log.challenge_notes || undefined,
+              photo: log.photos?.[0] || undefined,
+            } as MeltdownLogEntry;
+          }
+
+          return baseLog as LogEntry;
+        });
       } catch (error) {
         console.error('Logs query error:', error);
         return [];

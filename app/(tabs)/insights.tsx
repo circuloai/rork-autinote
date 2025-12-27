@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import type { MoodRating, AnyLogEntry, DailyLogEntry, MeltdownLogEntry } from '@/types';
+import type { MoodRating, AnyLogEntry, DailyLogEntry, MeltdownLogEntry, LogEntry } from '@/types';
 import { Download } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -69,9 +69,11 @@ export default function InsightsScreen() {
     const insights = [];
     
     if (activeChild.diagnosis?.toLowerCase().includes('autism') || activeChild.diagnosis?.toLowerCase().includes('asd')) {
-      const sensoryLogs = activeChildLogs.filter(log => 
-        log.moodTags?.includes('sensory') || log.triggers?.some((t: string) => t.toLowerCase().includes('sensory'))
-      );
+      const sensoryLogs = activeChildLogs.filter(log => {
+        const moodTags = log.type === 'daily' ? (log as DailyLogEntry).moodTags : log.type === 'meltdown' ? [] : (log as LogEntry).moodTags;
+        const triggers = log.type === 'meltdown' ? (log as MeltdownLogEntry).triggers : [];
+        return moodTags?.includes('sensory') || triggers?.some((t: string) => t.toLowerCase().includes('sensory'));
+      });
       insights.push({
         title: 'Sensory Processing',
         value: sensoryLogs.length,
@@ -81,7 +83,10 @@ export default function InsightsScreen() {
     }
     
     if (activeChild.diagnosis?.toLowerCase().includes('adhd')) {
-      const focusLogs = activeChildLogs.filter(log => log.moodTags?.includes('focused'));
+      const focusLogs = activeChildLogs.filter(log => {
+        const moodTags = log.type === 'daily' ? (log as DailyLogEntry).moodTags : log.type === 'meltdown' ? [] : (log as LogEntry).moodTags;
+        return moodTags?.includes('focused');
+      });
       insights.push({
         title: 'Focus Tracking',
         value: focusLogs.length,
@@ -91,9 +96,11 @@ export default function InsightsScreen() {
     }
     
     if (activeChild.commonTriggers && activeChild.commonTriggers.length > 0) {
-      const triggerRelatedLogs = activeChildLogs.filter(log =>
-        log.type === 'meltdown' || (log.moodRating === 'challenging')
-      );
+      const triggerRelatedLogs = activeChildLogs.filter(log => {
+        if (log.type === 'meltdown') return true;
+        if (log.type === 'daily') return (log as DailyLogEntry).overallRating === 'challenging';
+        return (log as LogEntry).moodRating === 'challenging';
+      });
       insights.push({
         title: 'Known Trigger Events',
         value: triggerRelatedLogs.length,
@@ -567,8 +574,9 @@ export default function InsightsScreen() {
             </Text>
             {activeChild.commonTriggers.slice(0, 5).map((trigger: string, idx: number) => {
               const mentionCount = activeChildLogs.filter(log => {
-                const anyLog = log as any;
-                const logText = `${log.positiveNotes || ''} ${log.challengeNotes || ''} ${anyLog.additionalNotes || ''}`.toLowerCase();
+                const positiveNotes = log.type === 'daily' ? (log as DailyLogEntry).whatWentWell || '' : (log as LogEntry).positiveNotes || '';
+                const challengeNotes = log.type === 'daily' ? (log as DailyLogEntry).whatWasChallenging || '' : log.type === 'meltdown' ? (log as MeltdownLogEntry).additionalNotes || '' : (log as LogEntry).challengeNotes || '';
+                const logText = `${positiveNotes} ${challengeNotes}`.toLowerCase();
                 return logText.includes(trigger.toLowerCase());
               }).length;
               return (

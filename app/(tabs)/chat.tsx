@@ -6,6 +6,7 @@ import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { useRorkAgent, createRorkTool, generateText } from '@rork-ai/toolkit-sdk';
 import { z } from 'zod';
+import type { AnyLogEntry, DailyLogEntry, MeltdownLogEntry, LogEntry, MoodTag } from '@/types';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -50,6 +51,29 @@ export default function ChatScreen() {
   const [fallbackError, setFallbackError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const getMoodRating = (log: AnyLogEntry): string => {
+    if (log.type === 'daily') return (log as DailyLogEntry).overallRating;
+    if (log.type === 'meltdown') return (log as MeltdownLogEntry).moodAtEvent;
+    return (log as LogEntry).moodRating;
+  };
+
+  const getMoodTags = (log: AnyLogEntry): MoodTag[] => {
+    if (log.type === 'meltdown') return [];
+    if (log.type === 'daily') return (log as DailyLogEntry).moodTags;
+    return (log as LogEntry).moodTags;
+  };
+
+  const getPositiveNotes = (log: AnyLogEntry): string => {
+    if (log.type === 'daily') return (log as DailyLogEntry).whatWentWell || '';
+    return (log as LogEntry).positiveNotes || '';
+  };
+
+  const getChallengeNotes = (log: AnyLogEntry): string => {
+    if (log.type === 'daily') return (log as DailyLogEntry).whatWasChallenging || '';
+    if (log.type === 'meltdown') return (log as MeltdownLogEntry).additionalNotes || '';
+    return (log as LogEntry).challengeNotes || '';
+  };
+
   const tools = useMemo(() => ({
     getChildProfile: createRorkTool({
       description: 'Get child profile info including diagnosis, triggers, age, school',
@@ -82,18 +106,21 @@ export default function ChatScreen() {
           const recentLogs = (activeChildLogs || []).slice(-days);
           
           const moodCounts = recentLogs.reduce((acc, log) => {
-            if (log?.moodRating) {
-              acc[log.moodRating] = (acc[log.moodRating] || 0) + 1;
+            if (log) {
+              const mood = getMoodRating(log);
+              acc[mood] = (acc[mood] || 0) + 1;
             }
             return acc;
           }, {} as Record<string, number>);
           
           const tagCounts = recentLogs.reduce((acc, log) => {
-            (log?.moodTags || []).forEach((tag: string) => {
-              if (tag) {
-                acc[tag] = (acc[tag] || 0) + 1;
-              }
-            });
+            if (log) {
+              getMoodTags(log).forEach((tag: string) => {
+                if (tag) {
+                  acc[tag] = (acc[tag] || 0) + 1;
+                }
+              });
+            }
             return acc;
           }, {} as Record<string, number>);
           
@@ -104,10 +131,10 @@ export default function ChatScreen() {
             commonTags: tagCounts,
             recentEntries: recentLogs.slice(-7).map(l => ({
               date: l?.date || 'Unknown',
-              mood: l?.moodRating || 'Unknown',
-              tags: l?.moodTags || [],
-              positiveNotes: l?.positiveNotes || '',
-              challengeNotes: l?.challengeNotes || '',
+              mood: l ? getMoodRating(l) : 'Unknown',
+              tags: l ? getMoodTags(l) : [],
+              positiveNotes: l ? getPositiveNotes(l) : '',
+              challengeNotes: l ? getChallengeNotes(l) : '',
             })),
           });
         } catch (error) {
@@ -129,13 +156,13 @@ export default function ChatScreen() {
           }
           return JSON.stringify({
             date: log.date || 'Unknown',
-            mood: log.moodRating || 'Unknown',
-            tags: log.moodTags || [],
-            positiveNotes: log.positiveNotes || '',
-            challengeNotes: log.challengeNotes || '',
-            sleepHours: log.sleepHours || 0,
-            behaviors: log.behaviors || '',
-            triggers: log.triggers || '',
+            mood: getMoodRating(log),
+            tags: getMoodTags(log),
+            positiveNotes: getPositiveNotes(log),
+            challengeNotes: getChallengeNotes(log),
+            sleepHours: log.type === 'daily' ? (log as DailyLogEntry).sleepHours || 0 : (log as LogEntry).sleepHours || 0,
+            behaviors: log.type === 'meltdown' ? [(log as MeltdownLogEntry).severity, `${(log as MeltdownLogEntry).durationMinutes}min`] : [],
+            triggers: log.type === 'meltdown' ? (log as MeltdownLogEntry).triggers : [],
           });
         } catch (error) {
           console.error('getDetailedLog error:', error);
@@ -155,11 +182,12 @@ export default function ChatScreen() {
           if (input.category === 'tags') {
             const tagsByMood: Record<string, string[]> = {};
             logs.forEach(log => {
-              if (log?.moodRating) {
-                if (!tagsByMood[log.moodRating]) {
-                  tagsByMood[log.moodRating] = [];
+              if (log) {
+                const mood = getMoodRating(log);
+                if (!tagsByMood[mood]) {
+                  tagsByMood[mood] = [];
                 }
-                tagsByMood[log.moodRating].push(...(log.moodTags || []));
+                tagsByMood[mood].push(...getMoodTags(log));
               }
             });
             
@@ -183,7 +211,7 @@ export default function ChatScreen() {
           if (input.category === 'moods') {
             const moodTrend = logs.map(l => ({
               date: l?.date || 'Unknown',
-              mood: l?.moodRating || 'Unknown',
+              mood: l ? getMoodRating(l) : 'Unknown',
             }));
             
             return JSON.stringify({
@@ -243,10 +271,10 @@ export default function ChatScreen() {
       const recentLogs = (activeChildLogs || []).slice(-14);
       const compactLogSummary = recentLogs.map((l) => ({
         date: l?.date ?? 'Unknown',
-        mood: l?.moodRating ?? 'Unknown',
-        tags: l?.moodTags ?? [],
-        positiveNotes: (l?.positiveNotes ?? '').slice(0, 240),
-        challengeNotes: (l?.challengeNotes ?? '').slice(0, 240),
+        mood: l ? getMoodRating(l) : 'Unknown',
+        tags: l ? getMoodTags(l) : [],
+        positiveNotes: l ? getPositiveNotes(l).slice(0, 240) : '',
+        challengeNotes: l ? getChallengeNotes(l).slice(0, 240) : '',
       }));
 
       const history = (messages || []).slice(-10).map((m: any) => {
@@ -352,16 +380,25 @@ export default function ChatScreen() {
 
     try {
       await sendMessage(text);
+      console.log('[Chat] Message sent successfully');
     } catch (err) {
       console.error('=== Send Error ===');
       console.error('Error:', err);
+      console.error('Error type:', typeof err);
+      console.error('Error instanceof Error:', err instanceof Error);
+      if (err && typeof err === 'object') {
+        console.error('Error keys:', Object.keys(err));
+        console.error('Error stringified:', JSON.stringify(err, null, 2));
+      }
       console.error('==================');
 
       const errorMessage = err instanceof Error
         ? err.message
         : typeof err === 'string'
           ? err
-          : 'Unable to connect to AI service';
+          : typeof err === 'object' && err && 'message' in err
+            ? String((err as any).message)
+            : 'Unable to connect to AI service';
 
       const isConnectionError = 
         /internal server error/i.test(errorMessage) || 
@@ -371,24 +408,34 @@ export default function ChatScreen() {
         /network/i.test(errorMessage) ||
         /timeout/i.test(errorMessage) ||
         /ECONNREFUSED/i.test(errorMessage) ||
-        /unable to connect/i.test(errorMessage);
+        /unable to connect/i.test(errorMessage) ||
+        /agent.*error/i.test(errorMessage);
+
+      console.log('[Chat] Is connection error:', isConnectionError);
+      console.log('[Chat] Error message:', errorMessage);
 
       if (isConnectionError) {
-        console.warn('Switching chat to fallback (non-streaming) mode due to connection error');
+        console.warn('[Chat] Switching to fallback mode due to connection error');
         setIsFallbackMode(true);
         appendLocalTextMessage('user', text);
         try {
           const assistant = await fallbackSend(text);
           appendLocalTextMessage('assistant', assistant);
           return;
-        } catch {
-          // fall through to alert below
+        } catch (fallbackErr) {
+          console.error('[Chat] Fallback also failed:', fallbackErr);
+          Alert.alert(
+            'Connection Error', 
+            'Unable to connect to AI service. Please check your internet connection and try again.', 
+            [{ text: 'OK' }]
+          );
+          return;
         }
       }
 
       Alert.alert(
-        'Connection Error', 
-        'Unable to connect to AI service. Please check your internet connection and try again.', 
+        'Error', 
+        'Something went wrong. Please try again.', 
         [
           { text: 'OK' },
           { 
@@ -398,7 +445,10 @@ export default function ChatScreen() {
               appendLocalTextMessage('user', text);
               fallbackSend(text).then(assistant => {
                 appendLocalTextMessage('assistant', assistant);
-              }).catch(() => {});
+              }).catch((err) => {
+                console.error('[Chat] Basic mode failed:', err);
+                Alert.alert('Error', 'AI service is currently unavailable.');
+              });
             }
           }
         ]
