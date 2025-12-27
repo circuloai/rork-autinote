@@ -3,8 +3,8 @@ import { useState, useMemo } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Animated, Alert, ActivityIndicator } from 'react-native';
 import { ArrowRight, X, Bell, Clock, CheckCircle2, Type, Moon, Volume2, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import type { UserRole, QuickReminder, CustomReminder, ReminderCategory, ReminderTone, ReminderRepeat } from '@/types';
 
 const PREDEFINED_TRIGGERS = [
@@ -18,7 +18,6 @@ const PREDEFINED_TRIGGERS = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { saveProfile, savePreferences } = useApp();
   const { signUp } = useAuth();
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   
@@ -182,6 +181,7 @@ export default function OnboardingScreen() {
   const handleComplete = async () => {
     setIsCreatingAccount(true);
     try {
+      console.log('[Onboarding] Starting signup process...');
       const { error } = await signUp(caregiverEmail.trim(), caregiverPassword);
       if (error) {
         Alert.alert('Sign Up Error', error.message);
@@ -189,48 +189,103 @@ export default function OnboardingScreen() {
         return;
       }
 
-      const childId = Date.now().toString();
+      console.log('[Onboarding] Signup successful, waiting for session...');
+      
+      let attempts = 0;
+      const maxAttempts = 20;
+      let userId: string | null = null;
+      
+      while (attempts < maxAttempts && !userId) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        const { data: { session } } = await supabase.auth.getSession();
+        userId = session?.user?.id ?? null;
+        attempts++;
+        console.log(`[Onboarding] Checking session attempt ${attempts}, userId: ${userId}`);
+      }
+
+      if (!userId) {
+        Alert.alert('Error', 'Failed to establish session. Please try logging in.');
+        setIsCreatingAccount(false);
+        return;
+      }
+
+      console.log('[Onboarding] Session established, saving profile to Supabase...');
+
       const allTriggers = [...selectedTriggers, ...customTriggers];
       
-      const profile = {
-        id: Date.now().toString(),
-        role: selectedRole,
-        caregiverName,
-        caregiverEmail,
-        caregiverPhone,
-        therapistPhone: therapistPhone || undefined,
-        children: [
-          {
-            id: childId,
-            name: childName,
-            age: parseInt(childAge),
-            diagnosis: diagnosis || undefined,
-            gradeLevel: gradeLevel || undefined,
-            schoolName: schoolName || undefined,
-            height: height || undefined,
-            weight: weight || undefined,
-            commonTriggers: allTriggers,
-            createdAt: new Date().toISOString(),
-          },
-        ],
-        activeChildId: childId,
-        createdAt: new Date().toISOString(),
-      };
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: userId,
+          role: selectedRole,
+          caregiver_name: caregiverName,
+          caregiver_email: caregiverEmail,
+          caregiver_phone: caregiverPhone,
+          therapist_phone: therapistPhone || null,
+          is_explore_mode: false,
+        })
+        .select()
+        .single();
 
-      const preferences = {
-        theme: darkMode ? 'dark' as const : 'light' as const,
-        colorTheme: selectedColorTheme,
-        fontSize: fontSizeScale,
-        textToSpeech,
-        reminders: quickReminders.some(r => r.enabled) || customReminders.length > 0,
-        quickReminders,
-        customReminders,
-      };
+      if (profileError) {
+        console.error('[Onboarding] Profile insert error:', profileError);
+        Alert.alert('Error', 'Failed to save profile. Please try again.');
+        setIsCreatingAccount(false);
+        return;
+      }
 
-      saveProfile(profile);
-      savePreferences(preferences);
+      console.log('[Onboarding] Profile saved:', profileData.id);
+
+      const { data: childData, error: childError } = await supabase
+        .from('children')
+        .insert({
+          profile_id: profileData.id,
+          name: childName,
+          age: parseInt(childAge),
+          diagnosis: diagnosis || null,
+          grade_level: gradeLevel || null,
+          school_name: schoolName || null,
+          height: height || null,
+          weight: weight || null,
+          common_triggers: allTriggers,
+        })
+        .select()
+        .single();
+
+      if (childError) {
+        console.error('[Onboarding] Child insert error:', childError);
+      } else {
+        console.log('[Onboarding] Child saved:', childData.id);
+        
+        await supabase
+          .from('profiles')
+          .update({ active_child_id: childData.id })
+          .eq('id', profileData.id);
+      }
+
+      const { error: prefsError } = await supabase
+        .from('preferences')
+        .insert({
+          user_id: userId,
+          theme: darkMode ? 'dark' : 'light',
+          color_theme: selectedColorTheme,
+          font_size: fontSizeScale,
+          text_to_speech: textToSpeech,
+          reminders: quickReminders.some(r => r.enabled) || customReminders.length > 0,
+          quick_reminders: quickReminders,
+          custom_reminders: customReminders,
+        });
+
+      if (prefsError) {
+        console.error('[Onboarding] Preferences insert error:', prefsError);
+      } else {
+        console.log('[Onboarding] Preferences saved');
+      }
+
+      console.log('[Onboarding] All data saved, navigating to home...');
       router.replace('/(tabs)/home' as any);
-    } catch {
+    } catch (err) {
+      console.error('[Onboarding] Unexpected error:', err);
       Alert.alert('Error', 'An unexpected error occurred');
       setIsCreatingAccount(false);
     }

@@ -17,14 +17,16 @@ const STORAGE_KEYS = {
 
 export const [AppProvider, useApp] = createContextHook(() => {
   const queryClient = useQueryClient();
-  const { user, isAuthenticated: authIsAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   const profileQuery = useQuery({
-    queryKey: ['userProfile', user?.id, !!user],
+    queryKey: ['userProfile', user?.id],
     queryFn: async () => {
+      console.log('[AppContext] Fetching profile for user:', user?.id);
       try {
         if (!user) {
+          console.log('[AppContext] No user, checking AsyncStorage...');
           const stored = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
           return stored ? JSON.parse(stored) as UserProfile : null;
         }
@@ -36,9 +38,11 @@ export const [AppProvider, useApp] = createContextHook(() => {
           .single();
 
         if (error || !profile) {
-          console.log('Profile fetch error:', error);
+          console.log('[AppContext] Profile fetch error:', error);
           return null;
         }
+
+        console.log('[AppContext] Profile fetched:', profile.id);
 
         const { data: children } = await supabase
           .from('children')
@@ -72,15 +76,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
           isExploreMode: profile.is_explore_mode || false,
         };
       } catch (error) {
-        console.error('Profile query error:', error);
+        console.error('[AppContext] Profile query error:', error);
         return null;
       }
     },
-    enabled: authIsAuthenticated || !user,
+    staleTime: 0,
   });
 
   const logsQuery = useQuery({
-    queryKey: ['logEntries', user?.id, !!user, profileQuery.data?.children],
+    queryKey: ['logEntries', user?.id, profileQuery.data?.children?.length],
     queryFn: async () => {
       try {
         if (!user || !profileQuery.data?.children) {
@@ -126,8 +130,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
 
   const preferencesQuery = useQuery({
-    queryKey: ['preferences', user?.id, !!user],
+    queryKey: ['preferences', user?.id],
     queryFn: async () => {
+      console.log('[AppContext] Fetching preferences for user:', user?.id);
       try {
         if (!user) {
           const stored = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
@@ -147,6 +152,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           .single();
 
         if (error || !data) {
+          console.log('[AppContext] Preferences fetch error or no data:', error);
           return {
             theme: 'light' as const,
             colorTheme: 'mint' as const,
@@ -156,6 +162,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           };
         }
 
+        console.log('[AppContext] Preferences fetched');
         return {
           theme: data.theme as any,
           colorTheme: data.color_theme as any,
@@ -167,7 +174,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           customReminders: data.custom_reminders || undefined,
         };
       } catch (error) {
-        console.error('Preferences query error:', error);
+        console.error('[AppContext] Preferences query error:', error);
         return {
           theme: 'light' as const,
           colorTheme: 'mint' as const,
@@ -177,7 +184,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         };
       }
     },
-    enabled: authIsAuthenticated || !user,
+    staleTime: 0,
   });
 
   const chatHistoryQuery = useQuery({
@@ -189,7 +196,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
 
   const sharedAccessQuery = useQuery({
-    queryKey: ['sharedAccess', user?.id, !!user, profileQuery.data?.id],
+    queryKey: ['sharedAccess', user?.id, profileQuery.data?.id, !!user],
     queryFn: async () => {
       if (!user || !profileQuery.data?.id) return [];
 
@@ -229,7 +236,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
 
   const therapistNotesQuery = useQuery({
-    queryKey: ['therapistNotes', user?.id, !!user, profileQuery.data?.children],
+    queryKey: ['therapistNotes', user?.id, profileQuery.data?.children, !!user],
     queryFn: async () => {
       if (!user || !profileQuery.data?.children) return [];
 
