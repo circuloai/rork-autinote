@@ -17,12 +17,6 @@ export default function DailyLogScreen() {
   const { activeChild, saveLog, activeChildLogs } = useApp();
   
   const selectedDate = params.date ? new Date(params.date) : new Date();
-  const formattedDate = selectedDate.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
   
   const existingLogsForDate = activeChildLogs.filter(log => {
     const logDate = new Date(log.date);
@@ -249,32 +243,30 @@ ${predefinedChallengeSuggestions.join('\n')}`;
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-    >
+    <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
           <X size={24} color={Colors.text} />
         </TouchableOpacity>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Daily Log</Text>
-          {params.date && (
-            <Text style={styles.subtitle}>{formattedDate}</Text>
-          )}
         </View>
         <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
           <Check size={24} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 200 }}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        <ScrollView 
+          style={styles.content} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
         {existingLogsForDate.length > 0 && (
           <View style={styles.existingLogsNotice}>
             <Text style={styles.existingLogsText}>
@@ -478,9 +470,9 @@ ${predefinedChallengeSuggestions.join('\n')}`;
           />
         </View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -613,9 +605,9 @@ const styles = StyleSheet.create({
     position: 'relative' as const,
   },
   tagSuggested: {
-    borderWidth: 2,
-    borderColor: Colors.primary + '60',
-    backgroundColor: Colors.primary + '08',
+    borderWidth: 1.5,
+    borderColor: Colors.primary + '40',
+    backgroundColor: Colors.surface,
   },
   tagEmoji: {
     fontSize: 16,
