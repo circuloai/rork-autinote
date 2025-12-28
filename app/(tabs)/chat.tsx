@@ -124,7 +124,19 @@ export default function ChatScreen() {
         return { role, content } as { role: 'user' | 'assistant'; content: string };
       }).filter((m) => m.content.length > 0);
 
-      const systemInstructions = `You are Autumn, a supportive AI assistant for parents of autistic children. IMPORTANT: Keep responses brief and scannable - use 2-4 short paragraphs maximum. Focus on actionable insights. Avoid lengthy explanations.`;
+      const systemInstructions = `You are Autumn, a warm and supportive AI assistant for caregivers of autistic children. 
+
+IMPORTANT RESPONSE STYLE:
+- Write like you're talking to a friend - conversational, empathetic, and human
+- Keep responses to 2-3 short paragraphs maximum
+- NO asterisks, NO bullet points, NO markdown formatting, NO lists
+- NO repetitive data or mechanical language
+- Focus on what matters most to the caregiver right now
+- Use natural language, contractions, and warmth
+- Avoid clinical or robotic tone
+- Connect emotionally while being practical
+
+You have context about their child and logs - reference it naturally when relevant, but don't list or repeat data they already know.`;
 
       const contextBlock = `Context (use when relevant):\n${JSON.stringify({ child: childContext, recentLogs: compactLogSummary }, null, 2)}`;
 
@@ -136,7 +148,7 @@ export default function ChatScreen() {
       const assistantText = await generateText({
         messages: [
           { role: 'user', content: systemInstructions },
-          { role: 'assistant', content: 'Understood. I\'ll keep responses concise, actionable, and easy to scan.' },
+          { role: 'assistant', content: 'Got it - I\'ll be warm, conversational, and concise. No formatting, just human connection.' },
           ...history,
           { role: 'user', content: `${contextBlock}\n\nUser: ${text}` },
         ],
