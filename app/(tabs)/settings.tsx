@@ -132,7 +132,7 @@ export default function SettingsScreen() {
           title: 'Reminders',
           subtitle: 'Set logging reminders',
           onPress: () => {
-            Alert.alert('Coming Soon', 'Reminder settings will be available soon');
+            router.push('/settings/reminders' as any);
           },
         },
         {
