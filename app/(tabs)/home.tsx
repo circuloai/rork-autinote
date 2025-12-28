@@ -669,14 +669,14 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     shadowRadius: 4,
   },
   dailyLogAction: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: Colors.text === '#F9FAFB' ? '#1B5E3F' : '#E8F5E9',
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: Colors.text === '#F9FAFB' ? '#2D7A52' : '#4CAF50',
   },
   meltdownLogAction: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: Colors.text === '#F9FAFB' ? '#7C3D10' : '#FFF3E0',
     borderWidth: 2,
-    borderColor: '#FF9800',
+    borderColor: Colors.text === '#F9FAFB' ? '#B85515' : '#FF9800',
   },
   logIconContainer: {
     width: 56,
