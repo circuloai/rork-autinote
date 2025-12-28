@@ -138,9 +138,9 @@ export default function SettingsScreen() {
         {
           icon: <Palette size={24} color={Colors.text} />,
           title: 'Customization',
-          subtitle: 'Themes, fonts, accessibility',
+          subtitle: '',
           onPress: () => {
-            Alert.alert('Coming Soon', 'Customization options will be available soon');
+            router.push('/settings/customization' as any);
           },
         },
         {
