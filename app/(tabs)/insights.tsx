@@ -149,6 +149,17 @@ export default function InsightsScreen() {
     if (!activeChild) return;
     
     setIsGeneratingPDF(true);
+
+    let dateRange = null;
+    if (activeChildLogs.length > 0) {
+      const dates = activeChildLogs.map(log => new Date(log.date).getTime());
+      const earliest = new Date(Math.min(...dates));
+      const latest = new Date(Math.max(...dates));
+      dateRange = {
+        start: earliest.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        end: latest.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      };
+    }
     try {
       const html = `
         <!DOCTYPE html>
@@ -181,7 +192,8 @@ export default function InsightsScreen() {
         <body>
           <div class="header">
             <h1>Autism Insights Report</h1>
-            <p class="date">Report for ${activeChild.name} | Generated on ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            <p class="date">Report for ${activeChild.name}${dateRange ? ` | Data from ${dateRange.start} to ${dateRange.end}` : ''}</p>
+            <p class="date" style="margin-top: 4px;">Generated on ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
           </div>
 
           <h2>Summary</h2>
