@@ -727,6 +727,20 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const saveSharedAccess = useCallback((access: SharedAccess) => saveSharedAccessMutate(access), [saveSharedAccessMutate]);
   const deleteSharedAccess = useCallback((accessId: string) => deleteSharedAccessMutate(accessId), [deleteSharedAccessMutate]);
   const saveTherapistNote = useCallback((note: TherapistNote) => saveTherapistNoteMutate(note), [saveTherapistNoteMutate]);
+  
+  const addSharedAccess = useCallback((data: Omit<SharedAccess, 'id' | 'createdAt' | 'acceptedAt' | 'parentId'>) => {
+    if (!profileQuery.data?.id) {
+      console.error('No profile ID available');
+      return;
+    }
+    const newAccess: SharedAccess = {
+      ...data,
+      id: `sa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      parentId: profileQuery.data.id,
+      createdAt: new Date().toISOString(),
+    };
+    saveSharedAccessMutate(newAccess);
+  }, [profileQuery.data?.id, saveSharedAccessMutate]);
 
   return useMemo(() => ({
     isAuthenticated,
@@ -749,9 +763,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
     logout,
     setActiveChild,
     saveSharedAccess,
+    addSharedAccess,
     deleteSharedAccess,
     saveTherapistNote,
-  }), [isAuthenticated, profileQuery.data, profileQuery.isLoading, logsQuery.data, logsQuery.isLoading, preferencesQuery.data, preferencesQuery.isLoading, chatHistoryQuery.data, chatHistoryQuery.isLoading, sharedAccessQuery.data, sharedAccessQuery.isLoading, therapistNotesQuery.data, therapistNotesQuery.isLoading, activeChild, activeChildLogs, streak, saveProfile, saveLog, deleteLog, savePreferences, saveChatHistory, clearChatHistory, logout, setActiveChild, saveSharedAccess, deleteSharedAccess, saveTherapistNote]);
+  }), [isAuthenticated, profileQuery.data, profileQuery.isLoading, logsQuery.data, logsQuery.isLoading, preferencesQuery.data, preferencesQuery.isLoading, chatHistoryQuery.data, chatHistoryQuery.isLoading, sharedAccessQuery.data, sharedAccessQuery.isLoading, therapistNotesQuery.data, therapistNotesQuery.isLoading, activeChild, activeChildLogs, streak, saveProfile, saveLog, deleteLog, savePreferences, saveChatHistory, clearChatHistory, logout, setActiveChild, saveSharedAccess, addSharedAccess, deleteSharedAccess, saveTherapistNote]);
 });
 
 export function useActiveChildLogs(startDate?: Date, endDate?: Date) {
