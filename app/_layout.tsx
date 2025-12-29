@@ -53,6 +53,12 @@ function RootLayoutNav() {
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="log/daily" options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="log/meltdown" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen name="calendar" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/shared-access" options={{ headerShown: false, title: 'Shared Access' }} />
+      <Stack.Screen name="settings/invite-therapist" options={{ headerShown: false, title: 'Invite Therapist' }} />
+      <Stack.Screen name="settings/reminders" options={{ headerShown: false, title: 'Reminders' }} />
+      <Stack.Screen name="settings/customization" options={{ headerShown: false, title: 'Customization' }} />
     </Stack>
   );
 }
