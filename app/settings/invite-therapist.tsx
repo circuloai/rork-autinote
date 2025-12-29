@@ -1,10 +1,13 @@
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Mail, User, Briefcase, Send } from 'lucide-react-native';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { ChevronLeft, Mail, User, Briefcase, Send, Copy, Share2, X } from 'lucide-react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert, Modal, Share, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useMemo, useState } from 'react';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import * as Clipboard from 'expo-clipboard';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 const THERAPIST_ROLES: import('@/types').TherapistRole[] = [
   'ABA',
@@ -18,7 +21,7 @@ const THERAPIST_ROLES: import('@/types').TherapistRole[] = [
 export default function InviteTherapistScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { activeChild, preferences, addSharedAccess } = useApp();
+  const { activeChild, preferences } = useApp();
   const Colors = useMemo(() => getColors(preferences), [preferences]);
   const styles = useMemo(() => createStyles(Colors), [Colors]);
 
@@ -26,6 +29,9 @@ export default function InviteTherapistScreen() {
   const [therapistEmail, setTherapistEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<import('@/types').TherapistRole | ''>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const { user } = useAuth();
 
   const handleSendInvitation = async () => {
     if (!therapistName.trim()) {
@@ -57,32 +63,54 @@ export default function InviteTherapistScreen() {
     setIsSubmitting(true);
 
     try {
-      addSharedAccess({
-        childId: activeChild.id,
-        therapistName: therapistName.trim(),
-        therapistEmail: therapistEmail.trim().toLowerCase(),
-        therapistRole: selectedRole,
-        status: 'pending',
-        canViewLogs: true,
-        canViewProgress: true,
-        canViewProfile: true,
-        canAddNotes: true,
-        canAddSessions: true,
-        canComment: true,
-        canExport: true,
-        readonlyMode: false,
-      });
+      const inviteToken = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      const inviteId = `invite-${Date.now()}`;
 
-      Alert.alert(
-        'Invitation Sent',
-        `An invitation has been sent to ${therapistEmail}. They will appear in your shared access list once they accept.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      const profileQuery = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!profileQuery.data) {
+        Alert.alert('Error', 'Profile not found. Please try again.');
+        return;
+      }
+
+      const accessData = {
+        id: inviteId,
+        child_id: activeChild.id,
+        parent_id: profileQuery.data.id,
+        therapist_id: null,
+        therapist_name: therapistName.trim(),
+        therapist_email: therapistEmail.trim().toLowerCase(),
+        therapist_role: selectedRole,
+        status: 'pending',
+        invite_token: inviteToken,
+        can_view_logs: true,
+        can_view_progress: true,
+        can_view_profile: true,
+        can_add_notes: true,
+        can_add_sessions: true,
+        can_comment: true,
+        can_export: true,
+        readonly_mode: false,
+      };
+
+      const { error } = await supabase
+        .from('shared_access')
+        .insert(accessData);
+
+      if (error) {
+        console.error('Error saving invitation:', error);
+        Alert.alert('Error', 'Failed to create invitation. Please try again.');
+        return;
+      }
+
+      const message = `Hi ${therapistName.trim()},\n\nYou've been invited to access ${activeChild.name}'s progress on Autumn AI. This will allow you to view logs, add professional notes, and collaborate on care.\n\nTo accept:\n1. Download Autumn AI from the App Store/Google Play\n2. Sign up with this email: ${therapistEmail.trim().toLowerCase()}\n3. Your invite will be automatically connected\n\nInvite Code: ${inviteToken}\n\nLooking forward to working together!`;
+
+      setInviteMessage(message);
+      setShowShareModal(true);
     } catch (error) {
       console.error('Error sending invitation:', error);
       Alert.alert('Error', 'Failed to send invitation. Please try again.');
@@ -234,6 +262,87 @@ export default function InviteTherapistScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <Modal
+        visible={showShareModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowShareModal(false);
+          router.back();
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: Colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Invitation Created!</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowShareModal(false);
+                  router.back();
+                }}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalDescription}>
+              Share this message with {therapistName} via your preferred method:
+            </Text>
+
+            <View style={styles.messageBox}>
+              <ScrollView style={styles.messageScroll} showsVerticalScrollIndicator={false}>
+                <Text style={styles.messageText}>{inviteMessage}</Text>
+              </ScrollView>
+            </View>
+
+            <View style={styles.shareButtons}>
+              <TouchableOpacity
+                style={[styles.shareButton, { backgroundColor: Colors.primary }]}
+                onPress={async () => {
+                  await Clipboard.setStringAsync(inviteMessage);
+                  Alert.alert('Copied!', 'Message copied to clipboard. You can now paste it in your preferred app.');
+                }}
+                activeOpacity={0.7}
+              >
+                <Copy size={20} color={Colors.surface} />
+                <Text style={styles.shareButtonText}>Copy Message</Text>
+              </TouchableOpacity>
+
+              {Platform.OS !== 'web' && (
+                <TouchableOpacity
+                  style={[styles.shareButton, { backgroundColor: Colors.secondary }]}
+                  onPress={async () => {
+                    try {
+                      await Share.share({
+                        message: inviteMessage,
+                      });
+                    } catch (error) {
+                      console.error('Error sharing:', error);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Share2 size={20} color={Colors.surface} />
+                  <Text style={styles.shareButtonText}>Share</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => {
+                setShowShareModal(false);
+                router.back();
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.doneButtonText, { color: Colors.primary }]}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -409,5 +518,88 @@ const createStyles = (Colors: ReturnType<typeof getColors>) =>
     emptyText: {
       fontSize: 16,
       color: Colors.textSecondary,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      width: '100%',
+      maxWidth: 500,
+      borderRadius: 20,
+      padding: 24,
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 22,
+      fontWeight: '700' as const,
+      color: Colors.text,
+    },
+    modalCloseButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: Colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalDescription: {
+      fontSize: 15,
+      color: Colors.textSecondary,
+      marginBottom: 16,
+      lineHeight: 22,
+    },
+    messageBox: {
+      backgroundColor: Colors.background,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 20,
+      maxHeight: 300,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    messageScroll: {
+      maxHeight: 250,
+    },
+    messageText: {
+      fontSize: 14,
+      color: Colors.text,
+      lineHeight: 20,
+    },
+    shareButtons: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 16,
+    },
+    shareButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 12,
+    },
+    shareButtonText: {
+      fontSize: 15,
+      fontWeight: '600' as const,
+      color: Colors.surface,
+    },
+    doneButton: {
+      alignItems: 'center',
+      paddingVertical: 12,
+    },
+    doneButtonText: {
+      fontSize: 16,
+      fontWeight: '600' as const,
     },
   });
