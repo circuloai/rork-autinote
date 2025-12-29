@@ -333,9 +333,8 @@ export default function HomeScreen() {
         )}
 
         {recentLog && (
-          Platform.OS === 'ios' ? (
-            <GlassView style={styles.recentMoodCard} glassEffectStyle="regular">
-            <Text style={styles.cardTitle}>Recent Mood</Text>
+          <View style={styles.recentMoodCard}>
+            <Text style={styles.recentMoodTitle}>Recent Mood</Text>
             <View style={styles.moodDisplay}>
               <Text style={styles.moodEmoji}>{getMoodEmoji(recentLog)}</Text>
               <View>
@@ -347,23 +346,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
             </View>
-            </GlassView>
-          ) : (
-            <View style={[styles.recentMoodCard, { backgroundColor: Colors.surface }]}>
-              <Text style={styles.cardTitle}>Recent Mood</Text>
-              <View style={styles.moodDisplay}>
-                <Text style={styles.moodEmoji}>{getMoodEmoji(recentLog)}</Text>
-                <View>
-                  <Text style={styles.moodLabel}>
-                    {getMoodLabel(recentLog)}
-                  </Text>
-                  <Text style={styles.moodDate}>
-                    {new Date(recentLog.date).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          )
+          </View>
         )}
 
         <View style={styles.quickActions}>
@@ -617,11 +600,21 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     fontStyle: 'italic' as const,
   },
   recentMoodCard: {
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : Colors.surface,
+    backgroundColor: '#FFFFFF',
     padding: 20,
     borderRadius: 16,
     marginBottom: 24,
-    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  recentMoodTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+    marginBottom: 12,
   },
   cardTitle: {
     fontSize: 14,
@@ -640,12 +633,12 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   moodLabel: {
     fontSize: 18,
     fontWeight: '600' as const,
-    color: Colors.text,
+    color: '#111827',
     marginBottom: 4,
   },
   moodDate: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: '#6B7280',
   },
   quickActions: {
     marginBottom: 24,
