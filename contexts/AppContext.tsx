@@ -2,7 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { UserProfile, LogEntry, Preferences, SharedAccess, TherapistNote, DailyLogEntry, MeltdownLogEntry, AnyLogEntry } from '@/types';
+import type { UserProfile, LogEntry, Preferences, SharedAccess, TherapistNote, DailyLogEntry, MeltdownLogEntry, AnyLogEntry, ChatMessage } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -298,6 +298,45 @@ export const [AppProvider, useApp] = createContextHook(() => {
       }));
     },
     enabled: !!profileQuery.data?.children,
+  });
+
+  const chatMessagesQuery = useQuery({
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+    queryKey: ['chatMessages', user?.id, sharedAccessQuery.data?.filter(sa => sa.status === 'accepted').map(sa => sa.id).sort().join(','), !!user],
+    queryFn: async () => {
+      if (!user || !sharedAccessQuery.data || sharedAccessQuery.data.length === 0) return [];
+
+      const sharedAccessIds = sharedAccessQuery.data
+        .filter(sa => sa.status === 'accepted')
+        .map(sa => sa.id);
+      
+      if (sharedAccessIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select(`
+          *,
+          sender:profiles!chat_messages_sender_id_fkey(caregiver_name, role)
+        `)
+        .in('shared_access_id', sharedAccessIds)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.log('Chat messages fetch error:', error);
+        return [];
+      }
+
+      return (data || []).map((msg: any) => ({
+        id: msg.id,
+        sharedAccessId: msg.shared_access_id,
+        senderId: msg.sender_id,
+        senderName: msg.sender?.caregiver_name || 'Unknown',
+        messageText: msg.message_text,
+        isRead: msg.is_read,
+        createdAt: msg.created_at,
+      }));
+    },
+    enabled: !!user && !!sharedAccessQuery.data && sharedAccessQuery.data.length > 0,
   });
 
   useEffect(() => {
@@ -643,6 +682,56 @@ export const [AppProvider, useApp] = createContextHook(() => {
     },
   });
 
+  const { mutate: saveChatMessageMutate } = useMutation({
+    mutationFn: async (message: Omit<ChatMessage, 'id' | 'createdAt'>) => {
+      if (!user || !profileQuery.data?.id) throw new Error('Not authenticated');
+
+      const messageData = {
+        shared_access_id: message.sharedAccessId,
+        sender_id: profileQuery.data.id,
+        message_text: message.messageText,
+        is_read: false,
+      };
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert(messageData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        sharedAccessId: data.shared_access_id,
+        senderId: data.sender_id,
+        senderName: message.senderName,
+        messageText: data.message_text,
+        isRead: data.is_read,
+        createdAt: data.created_at,
+      } as ChatMessage;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatMessages', user?.id] });
+    },
+  });
+
+  const { mutate: markMessageAsReadMutate } = useMutation({
+    mutationFn: async (messageId: string) => {
+      if (!user) throw new Error('Not authenticated');
+
+      await supabase
+        .from('chat_messages')
+        .update({ is_read: true })
+        .eq('id', messageId);
+
+      return messageId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatMessages', user?.id] });
+    },
+  });
+
   const { mutate: logoutMutate } = useMutation({
     mutationFn: async () => {
       if (user) {
@@ -727,6 +816,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const saveSharedAccess = useCallback((access: SharedAccess) => saveSharedAccessMutate(access), [saveSharedAccessMutate]);
   const deleteSharedAccess = useCallback((accessId: string) => deleteSharedAccessMutate(accessId), [deleteSharedAccessMutate]);
   const saveTherapistNote = useCallback((note: TherapistNote) => saveTherapistNoteMutate(note), [saveTherapistNoteMutate]);
+  const saveChatMessage = useCallback((message: Omit<ChatMessage, 'id' | 'createdAt'>) => saveChatMessageMutate(message), [saveChatMessageMutate]);
+  const markMessageAsRead = useCallback((messageId: string) => markMessageAsReadMutate(messageId), [markMessageAsReadMutate]);
   
   const addSharedAccess = useCallback((data: Omit<SharedAccess, 'id' | 'createdAt' | 'acceptedAt' | 'parentId'>) => {
     if (!profileQuery.data?.id) {
@@ -750,10 +841,11 @@ export const [AppProvider, useApp] = createContextHook(() => {
     chatHistory: chatHistoryQuery.data || [],
     sharedAccess: sharedAccessQuery.data || [],
     therapistNotes: therapistNotesQuery.data || [],
+    chatMessages: chatMessagesQuery.data || [],
     activeChild,
     activeChildLogs,
     streak,
-    isLoading: profileQuery.isLoading || logsQuery.isLoading || preferencesQuery.isLoading || chatHistoryQuery.isLoading || sharedAccessQuery.isLoading || therapistNotesQuery.isLoading,
+    isLoading: profileQuery.isLoading || logsQuery.isLoading || preferencesQuery.isLoading || chatHistoryQuery.isLoading || sharedAccessQuery.isLoading || therapistNotesQuery.isLoading || chatMessagesQuery.isLoading,
     saveProfile,
     saveLog,
     deleteLog,
@@ -766,7 +858,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
     addSharedAccess,
     deleteSharedAccess,
     saveTherapistNote,
-  }), [isAuthenticated, profileQuery.data, profileQuery.isLoading, logsQuery.data, logsQuery.isLoading, preferencesQuery.data, preferencesQuery.isLoading, chatHistoryQuery.data, chatHistoryQuery.isLoading, sharedAccessQuery.data, sharedAccessQuery.isLoading, therapistNotesQuery.data, therapistNotesQuery.isLoading, activeChild, activeChildLogs, streak, saveProfile, saveLog, deleteLog, savePreferences, saveChatHistory, clearChatHistory, logout, setActiveChild, saveSharedAccess, addSharedAccess, deleteSharedAccess, saveTherapistNote]);
+    saveChatMessage,
+    markMessageAsRead,
+  }), [isAuthenticated, profileQuery.data, profileQuery.isLoading, logsQuery.data, logsQuery.isLoading, preferencesQuery.data, preferencesQuery.isLoading, chatHistoryQuery.data, chatHistoryQuery.isLoading, sharedAccessQuery.data, sharedAccessQuery.isLoading, therapistNotesQuery.data, therapistNotesQuery.isLoading, chatMessagesQuery.data, chatMessagesQuery.isLoading, activeChild, activeChildLogs, streak, saveProfile, saveLog, deleteLog, savePreferences, saveChatHistory, clearChatHistory, logout, setActiveChild, saveSharedAccess, addSharedAccess, deleteSharedAccess, saveTherapistNote, saveChatMessage, markMessageAsRead]);
 });
 
 export function useActiveChildLogs(startDate?: Date, endDate?: Date) {

@@ -395,6 +395,52 @@ CREATE TRIGGER update_preferences_updated_at BEFORE UPDATE ON preferences
 
 CREATE TRIGGER update_therapist_notes_updated_at BEFORE UPDATE ON therapist_notes
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create chat_messages table for caregiver-therapist communication
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  shared_access_id UUID REFERENCES shared_access(id) ON DELETE CASCADE NOT NULL,
+  sender_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  message_text TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create index for chat messages
+CREATE INDEX IF NOT EXISTS idx_chat_messages_shared_access_id ON chat_messages(shared_access_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_id ON chat_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+
+-- Enable Row Level Security
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+
+-- Policies for chat_messages
+CREATE POLICY "Users can view messages in their conversations"
+  ON chat_messages FOR SELECT
+  USING (
+    shared_access_id IN (
+      SELECT sa.id FROM shared_access sa
+      INNER JOIN profiles p ON (sa.parent_id = p.id OR sa.therapist_id = p.id)
+      WHERE p.user_id = auth.uid() AND sa.status = 'accepted'
+    )
+  );
+
+CREATE POLICY "Users can send messages in their conversations"
+  ON chat_messages FOR INSERT
+  WITH CHECK (
+    sender_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
+    AND
+    shared_access_id IN (
+      SELECT sa.id FROM shared_access sa
+      INNER JOIN profiles p ON (sa.parent_id = p.id OR sa.therapist_id = p.id)
+      WHERE p.user_id = auth.uid() AND sa.status = 'accepted'
+    )
+  );
+
+CREATE POLICY "Users can update their own messages"
+  ON chat_messages FOR UPDATE
+  USING (sender_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()))
+  WITH CHECK (sender_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
 ```
 
 ## Getting Your Anon Key

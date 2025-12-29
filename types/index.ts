@@ -173,3 +173,13 @@ export interface NoteComment {
   commentText: string;
   createdAt: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  sharedAccessId: string;
+  senderId: string;
+  senderName: string;
+  messageText: string;
+  isRead: boolean;
+  createdAt: string;
+}

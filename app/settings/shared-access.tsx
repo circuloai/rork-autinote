@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Users, Plus, ChevronLeft, Mail, Shield, CheckCircle, Clock, XCircle } from 'lucide-react-native';
+import { Users, Plus, ChevronLeft, Mail, Shield, CheckCircle, Clock, XCircle, MessageCircle } from 'lucide-react-native';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useMemo } from 'react';
@@ -149,6 +149,16 @@ export default function SharedAccessScreen() {
                     <Text style={styles.therapistRole}>{access.therapistRole}</Text>
                     
                     <View style={styles.therapistActions}>
+                      {access.status === 'accepted' && (
+                        <TouchableOpacity
+                          style={styles.chatButton}
+                          onPress={() => router.push(`/therapist-chat?sharedAccessId=${access.id}` as any)}
+                          activeOpacity={0.7}
+                        >
+                          <MessageCircle size={16} color={Colors.primary} />
+                          <Text style={styles.chatButtonText}>Chat</Text>
+                        </TouchableOpacity>
+                      )}
                       <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() => router.push(`/settings/manage-permissions?id=${access.id}` as any)}
@@ -380,7 +390,22 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   },
   therapistActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  chatButtonText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.surface,
   },
   actionButton: {
     flexDirection: 'row',
