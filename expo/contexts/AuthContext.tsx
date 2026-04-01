@@ -112,26 +112,41 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const signInWithOAuth = useCallback(async (provider: 'google' | 'apple'): Promise<{ error: Error | null }> => {
     try {
       console.log(`[Auth] Starting ${provider} OAuth...`);
-      const redirectUrl = Linking.createURL('/');
+      
+      const redirectUrl = Platform.OS === 'web'
+        ? window.location.origin + window.location.pathname
+        : Linking.createURL('/');
       console.log('[Auth] Redirect URL:', redirectUrl);
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: true,
-        },
-      });
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: redirectUrl,
+          },
+        });
 
-      if (error) {
-        console.error(`[Auth] ${provider} OAuth error:`, error);
-        return { error };
-      }
+        if (error) {
+          console.error(`[Auth] ${provider} OAuth error:`, error);
+          return { error };
+        }
 
-      if (data?.url) {
-        if (Platform.OS === 'web') {
-          window.location.href = data.url;
-        } else {
+        return { error: null };
+      } else {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: redirectUrl,
+            skipBrowserRedirect: true,
+          },
+        });
+
+        if (error) {
+          console.error(`[Auth] ${provider} OAuth error:`, error);
+          return { error };
+        }
+
+        if (data?.url) {
           const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
           console.log('[Auth] WebBrowser result:', result.type);
 
@@ -155,9 +170,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
             return { error: new Error('Authentication was cancelled') };
           }
         }
-      }
 
-      return { error: null };
+        return { error: null };
+      }
     } catch (err) {
       console.error(`[Auth] ${provider} OAuth unexpected error:`, err);
       return { error: err instanceof Error ? err : new Error('An unexpected error occurred') };
