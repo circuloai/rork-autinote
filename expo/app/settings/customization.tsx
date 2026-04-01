@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import GlassCard from '@/components/GlassCard';
 
 export default function CustomizationScreen() {
   const { preferences, savePreferences } = useApp();
@@ -47,7 +48,7 @@ export default function CustomizationScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>APPEARANCE</Text>
-          <View style={styles.card}>
+          <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <View style={styles.settingItem}>
               <View style={styles.settingContent}>
                 <Text style={styles.settingTitle}>Theme</Text>
@@ -125,12 +126,12 @@ export default function CustomizationScreen() {
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
+          </GlassCard>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>TEXT SIZE</Text>
-          <View style={styles.card}>
+          <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <View style={styles.settingItem}>
               <View style={styles.settingContent}>
                 <Text style={styles.settingTitle}>Font Size</Text>
@@ -211,12 +212,12 @@ export default function CustomizationScreen() {
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
+          </GlassCard>
         </View>
 
         <View style={styles.previewSection}>
           <Text style={styles.sectionTitle}>PREVIEW</Text>
-          <View style={styles.card}>
+          <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <View style={styles.previewContent}>
               <Text style={[styles.previewTitle, { fontSize: fontSize === 'small' ? 18 : fontSize === 'large' ? 22 : 20 }]}>
                 Sample Text
@@ -225,7 +226,7 @@ export default function CustomizationScreen() {
                 This is how your text will appear throughout the app with the selected font size. Daily logs, insights, and all other content will use this size.
               </Text>
             </View>
-          </View>
+          </GlassCard>
         </View>
 
         <View style={{ height: 40 }} />

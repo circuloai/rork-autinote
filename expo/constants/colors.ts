@@ -6,14 +6,14 @@ type Theme = 'light' | 'dark';
 const themeColors = {
   mint: {
     light: {
-      background: '#C8F2E0',
-      surface: '#E6F9F2',
-      primary: '#10B981',
+      background: '#D4E9F7',
+      surface: '#E8F2FB',
+      primary: '#2563EB',
     },
     dark: {
-      background: '#0D5141',
-      surface: '#0F6650',
-      primary: '#34D399',
+      background: '#0F2442',
+      surface: '#162F54',
+      primary: '#60A5FA',
     },
   },
   lavender: {
@@ -50,8 +50,8 @@ export function getColors(preferences?: Preferences | null) {
   
   return {
     primary: themeColor.primary,
-    primaryDark: theme === 'dark' ? themeColor.primary : '#059669',
-    secondary: '#8B5CF6',
+    primaryDark: theme === 'dark' ? themeColor.primary : '#1D4ED8',
+    secondary: '#7C3AED',
     accent: '#F59E0B',
     
     success: '#10B981',

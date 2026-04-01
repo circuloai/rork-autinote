@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Save, Edit2, User, GraduationCap, Heart, AlertCircle, Sparkles } from 'lucide-react-native';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import GlassCard from '@/components/GlassCard';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -66,7 +67,7 @@ export default function ProfileScreen() {
           <Text style={styles.profileAge}>Age {activeChild.age}</Text>
         </View>
 
-        <View style={styles.infoCard}>
+        <GlassCard style={styles.infoCard} fallbackStyle={{ backgroundColor: Colors.surface }}>
           <View style={styles.cardHeader}>
             <GraduationCap size={24} color={Colors.primary} />
             <Text style={styles.cardTitle}>Basic Information</Text>
@@ -156,9 +157,9 @@ export default function ProfileScreen() {
               )}
             </View>
           )}
-        </View>
+        </GlassCard>
 
-        <View style={styles.infoCard}>
+        <GlassCard style={styles.infoCard} fallbackStyle={{ backgroundColor: Colors.surface }}>
           <View style={styles.cardHeader}>
             <AlertCircle size={24} color={Colors.secondary} />
             <Text style={styles.cardTitle}>Known Triggers</Text>
@@ -176,10 +177,10 @@ export default function ProfileScreen() {
           <Text style={styles.helperText}>
             These triggers help personalize your journaling experience and AI insights
           </Text>
-        </View>
+        </GlassCard>
 
         {(activeChild.strengths && activeChild.strengths.length > 0) && (
-          <View style={styles.infoCard}>
+          <GlassCard style={styles.infoCard} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <View style={styles.cardHeader}>
               <Heart size={24} color={Colors.primary} />
               <Text style={styles.cardTitle}>Strengths</Text>
@@ -191,11 +192,11 @@ export default function ProfileScreen() {
                 </View>
               ))}
             </View>
-          </View>
+          </GlassCard>
         )}
 
         {(activeChild.interests && activeChild.interests.length > 0) && (
-          <View style={styles.infoCard}>
+          <GlassCard style={styles.infoCard} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <View style={styles.cardHeader}>
               <Sparkles size={24} color={Colors.secondary} />
               <Text style={styles.cardTitle}>Interests</Text>
@@ -207,7 +208,7 @@ export default function ProfileScreen() {
                 </View>
               ))}
             </View>
-          </View>
+          </GlassCard>
         )}
 
         <View style={styles.explainerCard}>

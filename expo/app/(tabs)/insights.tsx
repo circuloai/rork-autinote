@@ -8,6 +8,7 @@ import type { MoodRating, AnyLogEntry, DailyLogEntry, MeltdownLogEntry, LogEntry
 import { Download } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import GlassCard from '@/components/GlassCard';
 
 
 
@@ -409,7 +410,7 @@ export default function InsightsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.compactCard}>
+        <GlassCard style={styles.compactCard} fallbackStyle={{ backgroundColor: Colors.surface }}>
           <Text style={styles.cardTitle}>😊 Mood Distribution</Text>
           {totalLogs > 0 ? (
             <>
@@ -457,10 +458,10 @@ export default function InsightsScreen() {
           ) : (
             <Text style={styles.emptyText}>No data yet. Start logging to see insights!</Text>
           )}
-        </View>
+        </GlassCard>
 
         {moodTags.length > 0 && (
-          <View style={styles.card}>
+          <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <Text style={styles.cardTitle}>🏆 Most Common Moods</Text>
             {moodTags.map(([tag, count], index) => (
               <View key={tag} style={styles.tagItem}>
@@ -473,11 +474,11 @@ export default function InsightsScreen() {
                 <Text style={styles.tagCount}>{count} times</Text>
               </View>
             ))}
-          </View>
+          </GlassCard>
         )}
 
         {meltdownStats.total > 0 && (
-          <View style={styles.card}>
+          <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <Text style={styles.cardTitle}>⚠️ Meltdown Analysis</Text>
             
             <View style={styles.meltdownGrid}>
@@ -549,11 +550,11 @@ export default function InsightsScreen() {
                 ))}
               </View>
             )}
-          </View>
+          </GlassCard>
         )}
 
         {profileBasedInsights && profileBasedInsights.length > 0 && (
-          <View style={styles.card}>
+          <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <Text style={styles.cardTitle}>🎯 Personalized Insights</Text>
             <Text style={styles.helperText}>
               Based on {activeChild?.name}&apos;s {activeChild?.diagnosis || 'profile'}
@@ -575,11 +576,11 @@ export default function InsightsScreen() {
                 </View>
               </View>
             ))}
-          </View>
+          </GlassCard>
         )}
 
         {activeChild?.commonTriggers && activeChild.commonTriggers.length > 0 && (
-          <View style={styles.card}>
+          <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
             <Text style={styles.cardTitle}>⚠️ Trigger Correlation</Text>
             <Text style={styles.helperText}>
               How often known triggers appear in logs
@@ -600,10 +601,10 @@ export default function InsightsScreen() {
                 </View>
               );
             })}
-          </View>
+          </GlassCard>
         )}
 
-        <View style={styles.card}>
+        <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
           <Text style={styles.cardTitle}>📈 Summary</Text>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Total Entries</Text>
@@ -620,7 +621,7 @@ export default function InsightsScreen() {
               }).length}
             </Text>
           </View>
-        </View>
+        </GlassCard>
 
         <View style={{ height: 40 }} />
       </ScrollView>

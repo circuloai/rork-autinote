@@ -600,7 +600,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     fontStyle: 'italic' as const,
   },
   recentMoodCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     padding: 20,
     borderRadius: 16,
     marginBottom: 24,
@@ -613,7 +613,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   recentMoodTitle: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: '#6B7280',
+    color: Colors.textSecondary,
     marginBottom: 12,
   },
   cardTitle: {
@@ -633,12 +633,12 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
   moodLabel: {
     fontSize: 18,
     fontWeight: '600' as const,
-    color: '#111827',
+    color: Colors.text,
     marginBottom: 4,
   },
   moodDate: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.textSecondary,
   },
   quickActions: {
     marginBottom: 24,
@@ -662,9 +662,9 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     shadowRadius: 4,
   },
   dailyLogAction: {
-    backgroundColor: Colors.text === '#F9FAFB' ? '#1B5E3F' : '#E8F5E9',
+    backgroundColor: Colors.text === '#F9FAFB' ? '#142D52' : '#DBEAFE',
     borderWidth: 2,
-    borderColor: Colors.text === '#F9FAFB' ? '#2D7A52' : '#4CAF50',
+    borderColor: Colors.text === '#F9FAFB' ? '#1E4A7A' : '#2563EB',
   },
   meltdownLogAction: {
     backgroundColor: Colors.text === '#F9FAFB' ? '#7C3D10' : '#FFF3E0',

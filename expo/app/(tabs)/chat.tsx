@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, Sparkles, Trash2 } from 'lucide-react-native';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import GlassCard from '@/components/GlassCard';
 import { generateText } from '@rork-ai/toolkit-sdk';
 import type { AnyLogEntry, DailyLogEntry, MeltdownLogEntry, LogEntry, MoodTag } from '@/types';
 
@@ -300,14 +301,18 @@ You have context about their child and logs - reference it naturally when releva
               </Text>
               <Text style={styles.suggestionsTitle}>Try asking:</Text>
               {suggestedQuestions.map((q, i) => (
-                <TouchableOpacity
+                <GlassCard
                   key={i}
                   style={styles.suggestionButton}
-                  onPress={() => setInput(q)}
-                  activeOpacity={0.7}
+                  fallbackStyle={{ backgroundColor: Colors.surface }}
                 >
-                  <Text style={styles.suggestionText}>{q}</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setInput(q)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.suggestionText}>{q}</Text>
+                  </TouchableOpacity>
+                </GlassCard>
               ))}
             </View>
           )}

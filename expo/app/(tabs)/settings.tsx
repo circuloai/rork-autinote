@@ -6,6 +6,7 @@ import * as Updates from 'expo-updates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import GlassCard from '@/components/GlassCard';
 
 type SettingsItem = {
   icon: React.ReactNode;
@@ -234,7 +235,7 @@ export default function SettingsScreen() {
         {settingsSections.map((section, sectionIndex) => (
           <View key={sectionIndex} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.card}>
+            <GlassCard style={styles.card} fallbackStyle={{ backgroundColor: Colors.surface }}>
               {section.items.map((item, itemIndex) => (
                 <TouchableOpacity
                   key={itemIndex}
@@ -253,7 +254,7 @@ export default function SettingsScreen() {
                   <ChevronRight size={20} color={Colors.textLight} />
                 </TouchableOpacity>
               ))}
-            </View>
+            </GlassCard>
           </View>
         ))}
 
@@ -307,7 +308,7 @@ const createStyles = (Colors: ReturnType<typeof getColors>) => StyleSheet.create
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#DBEAFE',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,

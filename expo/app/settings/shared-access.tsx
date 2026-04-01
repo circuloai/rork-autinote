@@ -6,6 +6,7 @@ import React, { useMemo } from 'react';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import type { SharedAccess } from '@/types';
+import GlassCard from '@/components/GlassCard';
 
 export default function SharedAccessScreen() {
   const insets = useSafeAreaInsets();
@@ -110,7 +111,7 @@ export default function SharedAccessScreen() {
           </View>
 
           {activeChildAccess.length === 0 ? (
-            <View style={styles.emptyCard}>
+            <GlassCard style={styles.emptyCard} fallbackStyle={{ backgroundColor: Colors.surface }}>
               <Users size={48} color={Colors.textLight} />
               <Text style={styles.emptyCardTitle}>No therapists connected</Text>
               <Text style={styles.emptyCardDescription}>
@@ -124,7 +125,7 @@ export default function SharedAccessScreen() {
                 <Plus size={20} color={Colors.primary} />
                 <Text style={styles.emptyCardButtonText}>Invite Therapist</Text>
               </TouchableOpacity>
-            </View>
+            </GlassCard>
           ) : (
             <View style={styles.therapistsList}>
               {activeChildAccess.map((access) => (
