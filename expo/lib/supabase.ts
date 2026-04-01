@@ -5,13 +5,23 @@ import { Platform } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
+const PLACEHOLDER_URL = 'https://placeholder.supabase.co';
+const PLACEHOLDER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MjYwMDAwMDAsImV4cCI6MTk0MTU3NjAwMH0.placeholder';
+
 let supabaseInstance: SupabaseClient | null = null;
 
 function createSupabaseClient() {
   if (supabaseInstance) return supabaseInstance;
 
+  const url = supabaseUrl || PLACEHOLDER_URL;
+  const key = supabaseAnonKey || PLACEHOLDER_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('[Supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. Using placeholder — database operations will fail.');
+  }
+
   try {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    supabaseInstance = createClient(url, key, {
       auth: {
         storage: AsyncStorage,
         autoRefreshToken: true,
@@ -22,7 +32,7 @@ function createSupabaseClient() {
     return supabaseInstance;
   } catch (error) {
     console.error('Failed to create Supabase client:', error);
-    return createClient(supabaseUrl, supabaseAnonKey, {
+    return createClient(url, key, {
       auth: {
         autoRefreshToken: true,
         persistSession: false,
