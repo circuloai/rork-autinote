@@ -1,7 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Animated, Alert, ActivityIndicator } from 'react-native';
+import { ChevronDown } from 'lucide-react-native';
 import { ArrowRight, X, Bell, Clock, CheckCircle2, Type, Moon, Volume2, Sparkles } from 'lucide-react-native';
+
+const GRADE_LEVELS = Array.from({ length: 12 }, (_, i) => i + 1);
+const FEET_OPTIONS = Array.from({ length: 5 }, (_, i) => i + 2);
+const INCHES_OPTIONS = Array.from({ length: 12 }, (_, i) => i);
 import Colors from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -34,7 +39,11 @@ export default function OnboardingScreen() {
   const [diagnosis, setDiagnosis] = useState('');
   const [gradeLevel, setGradeLevel] = useState('');
   const [schoolName, setSchoolName] = useState('');
-  const [height, setHeight] = useState('');
+  const [heightFeet, setHeightFeet] = useState('');
+  const [heightInches, setHeightInches] = useState('');
+  const [showGradeDropdown, setShowGradeDropdown] = useState(false);
+  const [showFeetDropdown, setShowFeetDropdown] = useState(false);
+  const [showInchesDropdown, setShowInchesDropdown] = useState(false);
   const [weight, setWeight] = useState('');
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [customTriggers, setCustomTriggers] = useState<string[]>([]);
@@ -255,7 +264,7 @@ export default function OnboardingScreen() {
           diagnosis: diagnosis || null,
           grade_level: gradeLevel || null,
           school_name: schoolName || null,
-          height: height || null,
+          height: heightFeet ? `${heightFeet}'${heightInches || '0'}"` : null,
           weight: weight || null,
           common_triggers: allTriggers,
         })
@@ -448,13 +457,47 @@ export default function OnboardingScreen() {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Grade Level</Text>
-                <TextInput
-                  style={styles.input}
-                  value={gradeLevel}
-                  onChangeText={setGradeLevel}
-                  placeholder="e.g., 3rd Grade"
-                  placeholderTextColor={Colors.textLight}
-                />
+                <TouchableOpacity
+                  style={styles.dropdownTrigger}
+                  onPress={() => {
+                    setShowGradeDropdown(!showGradeDropdown);
+                    setShowFeetDropdown(false);
+                    setShowInchesDropdown(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={gradeLevel ? styles.dropdownTriggerText : styles.dropdownPlaceholder}>
+                    {gradeLevel ? `Grade ${gradeLevel}` : 'Select grade'}
+                  </Text>
+                  <ChevronDown size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+                {showGradeDropdown && (
+                  <View style={styles.dropdownList}>
+                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
+                      {GRADE_LEVELS.map((grade) => (
+                        <TouchableOpacity
+                          key={grade}
+                          style={[
+                            styles.dropdownItem,
+                            gradeLevel === String(grade) && styles.dropdownItemActive,
+                          ]}
+                          onPress={() => {
+                            setGradeLevel(String(grade));
+                            setShowGradeDropdown(false);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[
+                            styles.dropdownItemText,
+                            gradeLevel === String(grade) && styles.dropdownItemTextActive,
+                          ]}>
+                            Grade {grade}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
               </View>
 
               <View style={styles.inputGroup}>
@@ -469,28 +512,107 @@ export default function OnboardingScreen() {
                 />
               </View>
 
-              <View style={styles.twoColumn}>
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.label}>Height</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={height}
-                    onChangeText={setHeight}
-                    placeholder={`e.g., 4'6"`}
-                    placeholderTextColor={Colors.textLight}
-                  />
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Height</Text>
+                <View style={styles.twoColumn}>
+                  <View style={{ flex: 1 }}>
+                    <TouchableOpacity
+                      style={styles.dropdownTrigger}
+                      onPress={() => {
+                        setShowFeetDropdown(!showFeetDropdown);
+                        setShowGradeDropdown(false);
+                        setShowInchesDropdown(false);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={heightFeet ? styles.dropdownTriggerText : styles.dropdownPlaceholder}>
+                        {heightFeet ? `${heightFeet} ft` : 'Feet'}
+                      </Text>
+                      <ChevronDown size={20} color={Colors.textSecondary} />
+                    </TouchableOpacity>
+                    {showFeetDropdown && (
+                      <View style={styles.dropdownList}>
+                        <ScrollView style={styles.dropdownScrollSmall} nestedScrollEnabled>
+                          {FEET_OPTIONS.map((ft) => (
+                            <TouchableOpacity
+                              key={ft}
+                              style={[
+                                styles.dropdownItem,
+                                heightFeet === String(ft) && styles.dropdownItemActive,
+                              ]}
+                              onPress={() => {
+                                setHeightFeet(String(ft));
+                                setShowFeetDropdown(false);
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[
+                                styles.dropdownItemText,
+                                heightFeet === String(ft) && styles.dropdownItemTextActive,
+                              ]}>
+                                {ft} ft
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <TouchableOpacity
+                      style={styles.dropdownTrigger}
+                      onPress={() => {
+                        setShowInchesDropdown(!showInchesDropdown);
+                        setShowGradeDropdown(false);
+                        setShowFeetDropdown(false);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={heightInches !== '' ? styles.dropdownTriggerText : styles.dropdownPlaceholder}>
+                        {heightInches !== '' ? `${heightInches} in` : 'Inches'}
+                      </Text>
+                      <ChevronDown size={20} color={Colors.textSecondary} />
+                    </TouchableOpacity>
+                    {showInchesDropdown && (
+                      <View style={styles.dropdownList}>
+                        <ScrollView style={styles.dropdownScrollSmall} nestedScrollEnabled>
+                          {INCHES_OPTIONS.map((inch) => (
+                            <TouchableOpacity
+                              key={inch}
+                              style={[
+                                styles.dropdownItem,
+                                heightInches === String(inch) && styles.dropdownItemActive,
+                              ]}
+                              onPress={() => {
+                                setHeightInches(String(inch));
+                                setShowInchesDropdown(false);
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[
+                                styles.dropdownItemText,
+                                heightInches === String(inch) && styles.dropdownItemTextActive,
+                              ]}>
+                                {inch} in
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
                 </View>
+              </View>
 
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.label}>Weight</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={weight}
-                    onChangeText={setWeight}
-                    placeholder="e.g., 65 lbs"
-                    placeholderTextColor={Colors.textLight}
-                  />
-                </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Weight</Text>
+                <TextInput
+                  style={styles.input}
+                  value={weight}
+                  onChangeText={setWeight}
+                  placeholder="e.g., 65 lbs"
+                  placeholderTextColor={Colors.textLight}
+                />
               </View>
 
               <View style={styles.inputGroup}>
@@ -1680,5 +1802,55 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  dropdownTrigger: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownTriggerText: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  dropdownPlaceholder: {
+    fontSize: 16,
+    color: Colors.textLight,
+  },
+  dropdownList: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  dropdownScroll: {
+    maxHeight: 200,
+  },
+  dropdownScrollSmall: {
+    maxHeight: 160,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  dropdownItemActive: {
+    backgroundColor: Colors.primary + '20',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  dropdownItemTextActive: {
+    color: Colors.primary,
+    fontWeight: '600' as const,
   },
 });
