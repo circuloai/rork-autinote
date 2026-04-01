@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Animated, Alert, ActivityIndicator } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
-import { ArrowRight, X, Bell, Clock, CheckCircle2, Type, Moon, Volume2, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, X, Bell, Clock, CheckCircle2, Type, Moon, Volume2, Sparkles } from 'lucide-react-native';
 
 const GRADE_LEVELS = Array.from({ length: 12 }, (_, i) => i + 1);
 const FEET_OPTIONS = Array.from({ length: 5 }, (_, i) => i + 2);
@@ -321,6 +321,18 @@ export default function OnboardingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {step === 1 && (
+            <TouchableOpacity
+              style={styles.backToWelcome}
+              onPress={() => router.back()}
+              activeOpacity={0.7}
+              testID="back-to-welcome"
+            >
+              <ArrowLeft size={20} color={Colors.textSecondary} />
+              <Text style={styles.backToWelcomeText}>Back</Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.header}>
             <Text style={[styles.title, { fontSize: getFontSize(32) }]}>
               {step === 1 ? "Let's Get Started" : step === 2 ? "Child Information" : step === 3 ? "Let's Set Up Your Daily Reminders" : step === 4 ? "Theme & Accessibility" : "You're All Set!"}
@@ -1145,6 +1157,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 40,
     paddingBottom: 20,
+  },
+  backToWelcome: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    marginBottom: 16,
+    alignSelf: 'flex-start' as const,
+  },
+  backToWelcomeText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    fontWeight: '500' as const,
   },
   header: {
     marginBottom: 24,
