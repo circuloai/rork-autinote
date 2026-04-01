@@ -7,7 +7,7 @@ import { LogBox, View, ActivityIndicator, StyleSheet, Text, Platform } from "rea
 import * as Updates from "expo-updates";
 import { AppProvider } from "@/contexts/AppContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { trpc, trpcClient } from "@/lib/trpc";
+
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 if (typeof ErrorUtils !== 'undefined') {
@@ -118,7 +118,6 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
           <AuthProvider>
             <AppProvider>
               <GestureHandlerRootView style={{ flex: 1 }}>
@@ -126,7 +125,6 @@ export default function RootLayout() {
               </GestureHandlerRootView>
             </AppProvider>
           </AuthProvider>
-        </trpc.Provider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
