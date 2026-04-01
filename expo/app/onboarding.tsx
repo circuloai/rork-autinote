@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Animated, Alert, ActivityIndicator } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
+import { ChevronDown, Chrome, Apple } from 'lucide-react-native';
 import { ArrowLeft, ArrowRight, X, Bell, Clock, CheckCircle2, Type, Moon, Volume2, Sparkles } from 'lucide-react-native';
 
 const GRADE_LEVELS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -10,6 +10,7 @@ const INCHES_OPTIONS = Array.from({ length: 12 }, (_, i) => i);
 import Colors from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+
 import type { UserRole, QuickReminder, CustomReminder, ReminderCategory, ReminderTone, ReminderRepeat } from '@/types';
 
 const PREDEFINED_TRIGGERS = [
@@ -23,8 +24,9 @@ const PREDEFINED_TRIGGERS = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, signInWithOAuth } = useAuth();
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
   
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   
@@ -72,6 +74,24 @@ export default function OnboardingScreen() {
   const celebrationScale = new Animated.Value(0);
 
 
+
+  const handleOAuthSignUp = async (provider: 'google' | 'apple') => {
+    setOauthLoading(provider);
+    try {
+      const { error } = await signInWithOAuth(provider);
+      if (error) {
+        if (error.message !== 'Authentication was cancelled') {
+          Alert.alert('Sign Up Error', error.message);
+        }
+      } else {
+        router.replace('/(tabs)/home' as any);
+      }
+    } catch {
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setOauthLoading(null);
+    }
+  };
 
   const getFontSize = (baseSize: number): number => {
     const scale = { small: 0.85, medium: 1, large: 1.15 }[fontSizeScale];
@@ -422,6 +442,48 @@ export default function OnboardingScreen() {
                   placeholderTextColor={Colors.textLight}
                   keyboardType="phone-pad"
                 />
+              </View>
+
+              <View style={styles.socialDividerContainer}>
+                <View style={styles.socialDividerLine} />
+                <Text style={styles.socialDividerText}>or sign up with</Text>
+                <View style={styles.socialDividerLine} />
+              </View>
+
+              <View style={styles.socialButtonsRow}>
+                <TouchableOpacity
+                  style={styles.socialButton}
+                  onPress={() => handleOAuthSignUp('google')}
+                  disabled={oauthLoading !== null}
+                  activeOpacity={0.8}
+                  testID="google-signup"
+                >
+                  {oauthLoading === 'google' ? (
+                    <ActivityIndicator size="small" color={Colors.text} />
+                  ) : (
+                    <>
+                      <Chrome size={20} color={Colors.text} />
+                      <Text style={styles.socialButtonText}>Google</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.socialButton, styles.appleSocialButton]}
+                  onPress={() => handleOAuthSignUp('apple')}
+                  disabled={oauthLoading !== null}
+                  activeOpacity={0.8}
+                  testID="apple-signup"
+                >
+                  {oauthLoading === 'apple' ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Apple size={20} color="#FFFFFF" />
+                      <Text style={styles.appleButtonText}>Apple</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -1876,5 +1938,51 @@ const styles = StyleSheet.create({
   dropdownItemTextActive: {
     color: Colors.primary,
     fontWeight: '600' as const,
+  },
+  socialDividerContainer: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    marginTop: 4,
+  },
+  socialDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  socialDividerText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '500' as const,
+  },
+  socialButtonsRow: {
+    flexDirection: 'row' as const,
+    gap: 12,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  appleSocialButton: {
+    backgroundColor: '#000000',
+    borderColor: '#000000',
+  },
+  socialButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  appleButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
   },
 });

@@ -1,8 +1,11 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
+import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const queryClient = useQueryClient();
@@ -36,7 +39,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             console.log('[Auth] User signed in, invalidating queries...');
-            queryClient.invalidateQueries();
+            void queryClient.invalidateQueries();
           } else if (event === 'SIGNED_OUT') {
             console.log('[Auth] User signed out, clearing queries...');
             queryClient.clear();
@@ -48,7 +51,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       }
     };
 
-    initAuth();
+    void initAuth();
 
     return () => {
       if (subscription) {
@@ -61,7 +64,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     };
   }, [queryClient]);
 
-  const signUp = async (email: string, password: string): Promise<{ error: AuthError | null; user: User | null; session: Session | null; needsEmailConfirmation: boolean }> => {
+  const signUp = useCallback(async (email: string, password: string): Promise<{ error: AuthError | null; user: User | null; session: Session | null; needsEmailConfirmation: boolean }> => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -76,9 +79,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       session: data.session ?? null,
       needsEmailConfirmation 
     };
-  };
+  }, []);
 
-  const signIn = async (email: string, password: string): Promise<{ error: AuthError | null }> => {
+  const signIn = useCallback(async (email: string, password: string): Promise<{ error: AuthError | null }> => {
     console.log('[Auth] Signing in...');
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -88,9 +91,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       console.log('[Auth] Sign in successful, user:', data.session.user.id);
     }
     return { error };
-  };
+  }, []);
 
-  const signOut = async (): Promise<{ error: AuthError | null }> => {
+  const signOut = useCallback(async (): Promise<{ error: AuthError | null }> => {
     console.log('[Auth] Signing out...');
     const { error } = await supabase.auth.signOut();
     if (!error) {
@@ -99,14 +102,69 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       setUser(null);
     }
     return { error };
-  };
+  }, []);
 
-  const resetPassword = async (email: string): Promise<{ error: AuthError | null }> => {
+  const resetPassword = useCallback(async (email: string): Promise<{ error: AuthError | null }> => {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     return { error };
-  };
+  }, []);
 
-  return {
+  const signInWithOAuth = useCallback(async (provider: 'google' | 'apple'): Promise<{ error: Error | null }> => {
+    try {
+      console.log(`[Auth] Starting ${provider} OAuth...`);
+      const redirectUrl = Linking.createURL('/');
+      console.log('[Auth] Redirect URL:', redirectUrl);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        console.error(`[Auth] ${provider} OAuth error:`, error);
+        return { error };
+      }
+
+      if (data?.url) {
+        if (Platform.OS === 'web') {
+          window.location.href = data.url;
+        } else {
+          const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+          console.log('[Auth] WebBrowser result:', result.type);
+
+          if (result.type === 'success' && result.url) {
+            const url = new URL(result.url);
+            const params = new URLSearchParams(url.hash.substring(1));
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              if (sessionError) {
+                console.error('[Auth] Session set error:', sessionError);
+                return { error: sessionError };
+              }
+            }
+          } else if (result.type === 'cancel' || result.type === 'dismiss') {
+            return { error: new Error('Authentication was cancelled') };
+          }
+        }
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error(`[Auth] ${provider} OAuth unexpected error:`, err);
+      return { error: err instanceof Error ? err : new Error('An unexpected error occurred') };
+    }
+  }, []);
+
+  return useMemo(() => ({
     session,
     user,
     isLoading,
@@ -115,5 +173,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     signIn,
     signOut,
     resetPassword,
-  };
+    signInWithOAuth,
+  }), [session, user, isLoading, signUp, signIn, signOut, resetPassword, signInWithOAuth]);
 });
