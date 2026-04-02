@@ -21,7 +21,7 @@ if (typeof ErrorUtils !== 'undefined') {
 }
 
 try {
-  SplashScreen.preventAutoHideAsync();
+  void SplashScreen.preventAutoHideAsync();
 } catch (error) {
   console.error('Error preventing splash screen auto hide:', error);
 }
@@ -35,11 +35,14 @@ LogBox.ignoreLogs([
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 3,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: 1,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
       staleTime: 5 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
       networkMode: 'offlineFirst',
+    },
+    mutations: {
+      retry: false,
     },
   },
 });
@@ -95,7 +98,7 @@ export default function RootLayout() {
       }
     }
 
-    prepare();
+    void prepare();
   }, []);
 
   if (!appIsReady) {

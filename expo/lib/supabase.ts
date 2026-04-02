@@ -18,17 +18,17 @@ function createSupabaseClient() {
   const url = supabaseUrl || PLACEHOLDER_URL;
   const key = supabaseAnonKey || PLACEHOLDER_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('[Supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. Using placeholder — database operations will fail.');
+  if (!isSupabaseConfigured) {
+    console.warn('[Supabase] Not configured. Using placeholder client — auth and database operations will be skipped.');
   }
 
   try {
     supabaseInstance = createClient(url, key, {
       auth: {
         storage: AsyncStorage,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: Platform.OS === 'web',
+        autoRefreshToken: isSupabaseConfigured,
+        persistSession: isSupabaseConfigured,
+        detectSessionInUrl: isSupabaseConfigured && Platform.OS === 'web',
       },
     });
     return supabaseInstance;
@@ -36,7 +36,7 @@ function createSupabaseClient() {
     console.error('Failed to create Supabase client:', error);
     return createClient(url, key, {
       auth: {
-        autoRefreshToken: true,
+        autoRefreshToken: false,
         persistSession: false,
         detectSessionInUrl: false,
       },
@@ -200,8 +200,8 @@ export type Database = {
           text_to_speech: boolean;
           reminders: boolean;
           reminder_time: string | null;
-          quick_reminders: any | null;
-          custom_reminders: any | null;
+          quick_reminders: Record<string, unknown>[] | null;
+          custom_reminders: Record<string, unknown>[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -214,8 +214,8 @@ export type Database = {
           text_to_speech?: boolean;
           reminders?: boolean;
           reminder_time?: string | null;
-          quick_reminders?: any | null;
-          custom_reminders?: any | null;
+          quick_reminders?: Record<string, unknown>[] | null;
+          custom_reminders?: Record<string, unknown>[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -228,8 +228,8 @@ export type Database = {
           text_to_speech?: boolean;
           reminders?: boolean;
           reminder_time?: string | null;
-          quick_reminders?: any | null;
-          custom_reminders?: any | null;
+          quick_reminders?: Record<string, unknown>[] | null;
+          custom_reminders?: Record<string, unknown>[] | null;
           created_at?: string;
           updated_at?: string;
         };

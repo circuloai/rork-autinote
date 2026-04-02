@@ -26,7 +26,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       console.log('[AppContext] Fetching profile for user:', user?.id);
       try {
         if (!user || !isSupabaseConfigured) {
-          console.log('[AppContext] No user or Supabase not configured, checking AsyncStorage...');
+          console.log('[AppContext] No user or Supabase not configured, using AsyncStorage');
           const stored = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
           return stored ? JSON.parse(stored) as UserProfile : null;
         }
@@ -81,6 +81,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       }
     },
     staleTime: 0,
+    retry: isSupabaseConfigured && !!user ? 2 : false,
   });
 
   const logsQuery = useQuery({
@@ -155,6 +156,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       }
     },
     enabled: !!profileQuery.data?.children,
+    retry: isSupabaseConfigured && !!user ? 2 : false,
   });
 
   const preferencesQuery = useQuery({
@@ -213,6 +215,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       }
     },
     staleTime: 0,
+    retry: isSupabaseConfigured && !!user ? 2 : false,
   });
 
   const chatHistoryQuery = useQuery({
@@ -260,7 +263,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         acceptedAt: sa.accepted_at || undefined,
       }));
     },
-    enabled: !!user && !!profileQuery.data?.id,
+    enabled: !!user && !!profileQuery.data?.id && isSupabaseConfigured,
+    retry: isSupabaseConfigured ? 2 : false,
   });
 
   const therapistNotesQuery = useQuery({
@@ -297,7 +301,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         updatedAt: note.updated_at,
       }));
     },
-    enabled: !!profileQuery.data?.children,
+    enabled: !!profileQuery.data?.children && isSupabaseConfigured && !!user,
+    retry: isSupabaseConfigured ? 2 : false,
   });
 
   const chatMessagesQuery = useQuery({
@@ -336,7 +341,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         createdAt: msg.created_at,
       }));
     },
-    enabled: !!user && !!sharedAccessQuery.data && sharedAccessQuery.data.length > 0,
+    enabled: !!user && !!sharedAccessQuery.data && sharedAccessQuery.data.length > 0 && isSupabaseConfigured,
+    retry: isSupabaseConfigured ? 2 : false,
   });
 
   useEffect(() => {
@@ -412,8 +418,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
       return profile;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
       setIsAuthenticated(true);
     },
   });
@@ -509,7 +515,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     },
     onSuccess: () => {
       console.log('[AppContext] Log save successful, invalidating queries');
-      queryClient.invalidateQueries({ queryKey: ['logEntries', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['logEntries', user?.id] });
     },
     onError: (error: any) => {
       console.error('[AppContext] Log save failed:', JSON.stringify(error, null, 2));
@@ -531,7 +537,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       return logsQuery.data || [];
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['logEntries', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['logEntries', user?.id] });
     },
   });
 
@@ -569,7 +575,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       return prefs;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['preferences', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['preferences', user?.id] });
     },
   });
 
@@ -631,7 +637,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       return access;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sharedAccess', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['sharedAccess', user?.id] });
     },
   });
 
@@ -642,7 +648,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       return accessId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sharedAccess', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['sharedAccess', user?.id] });
     },
   });
 
@@ -678,7 +684,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       return note;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['therapistNotes', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['therapistNotes', user?.id] });
     },
   });
 
@@ -712,7 +718,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       } as ChatMessage;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatMessages', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['chatMessages', user?.id] });
     },
   });
 
@@ -728,7 +734,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       return messageId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatMessages', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['chatMessages', user?.id] });
     },
   });
 
