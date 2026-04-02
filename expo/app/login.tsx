@@ -27,8 +27,12 @@ export default function LoginScreen() {
       } else {
         router.replace('/(tabs)/home' as any);
       }
-    } catch {
-      Alert.alert('Error', 'An unexpected error occurred');
+    } catch (err) {
+      console.error('[Login] Unexpected error:', err);
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      Alert.alert('Login Error', message.includes('fetch') || message.includes('network') || message.includes('Network')
+        ? 'Unable to connect to the server. Please check your internet connection and try again.'
+        : message);
     } finally {
       setIsLoading(false);
     }
@@ -49,8 +53,12 @@ export default function LoginScreen() {
       } else {
         router.replace('/(tabs)/home' as any);
       }
-    } catch {
-      Alert.alert('Error', 'An unexpected error occurred');
+    } catch (err) {
+      console.error('[Login] OAuth unexpected error:', err);
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      Alert.alert('Error', message.includes('fetch') || message.includes('network') || message.includes('Network')
+        ? 'Unable to connect to the server. Please check your internet connection and try again.'
+        : message);
     } finally {
       setOauthLoading(null);
     }

@@ -346,7 +346,10 @@ export default function OnboardingScreen() {
       router.replace('/(tabs)/home' as any);
     } catch (err) {
       console.error('[Onboarding] Unexpected error:', err);
-      Alert.alert('Error', 'An unexpected error occurred');
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      Alert.alert('Error', message.includes('fetch') || message.includes('network') || message.includes('Network')
+        ? 'Unable to connect to the server. Please check your internet connection and try again.'
+        : message);
       setIsCreatingAccount(false);
     }
   };

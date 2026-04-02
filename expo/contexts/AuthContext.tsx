@@ -73,48 +73,102 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   }, [queryClient]);
 
   const signUp = useCallback(async (email: string, password: string): Promise<{ error: AuthError | null; user: User | null; session: Session | null; needsEmailConfirmation: boolean }> => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    
-    const needsEmailConfirmation = !error && !!data.user && !data.session;
-    console.log('[Auth] SignUp result - user:', data.user?.id, 'session:', !!data.session, 'needsConfirmation:', needsEmailConfirmation);
-    
-    return { 
-      error, 
-      user: data.user ?? null, 
-      session: data.session ?? null,
-      needsEmailConfirmation 
-    };
+    if (!isSupabaseConfigured) {
+      console.error('[Auth] Cannot sign up: Supabase is not configured');
+      return {
+        error: { message: 'Supabase is not configured. Please check your environment variables.', name: 'AuthError', status: 500 } as AuthError,
+        user: null,
+        session: null,
+        needsEmailConfirmation: false,
+      };
+    }
+
+    try {
+      console.log('[Auth] Attempting sign up for:', email);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
+      const needsEmailConfirmation = !error && !!data.user && !data.session;
+      console.log('[Auth] SignUp result - user:', data.user?.id, 'session:', !!data.session, 'needsConfirmation:', needsEmailConfirmation);
+      
+      return { 
+        error, 
+        user: data.user ?? null, 
+        session: data.session ?? null,
+        needsEmailConfirmation 
+      };
+    } catch (err) {
+      console.error('[Auth] SignUp network/unexpected error:', err);
+      const message = err instanceof Error ? err.message : 'Network request failed';
+      return {
+        error: { message: `Connection error: ${message}. Please check your internet connection and try again.`, name: 'AuthError', status: 0 } as AuthError,
+        user: null,
+        session: null,
+        needsEmailConfirmation: false,
+      };
+    }
   }, []);
 
   const signIn = useCallback(async (email: string, password: string): Promise<{ error: AuthError | null }> => {
-    console.log('[Auth] Signing in...');
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (!error && data.session) {
-      console.log('[Auth] Sign in successful, user:', data.session.user.id);
+    if (!isSupabaseConfigured) {
+      console.error('[Auth] Cannot sign in: Supabase is not configured');
+      return {
+        error: { message: 'Supabase is not configured. Please check your environment variables.', name: 'AuthError', status: 500 } as AuthError,
+      };
     }
-    return { error };
+
+    try {
+      console.log('[Auth] Signing in...');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        console.error('[Auth] Sign in error:', error.message);
+      } else if (data.session) {
+        console.log('[Auth] Sign in successful, user:', data.session.user.id);
+      }
+      return { error };
+    } catch (err) {
+      console.error('[Auth] SignIn network/unexpected error:', err);
+      const message = err instanceof Error ? err.message : 'Network request failed';
+      return {
+        error: { message: `Connection error: ${message}. Please check your internet connection and try again.`, name: 'AuthError', status: 0 } as AuthError,
+      };
+    }
   }, []);
 
   const signOut = useCallback(async (): Promise<{ error: AuthError | null }> => {
-    console.log('[Auth] Signing out...');
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      console.log('[Auth] Sign out successful');
+    try {
+      console.log('[Auth] Signing out...');
+      const { error } = await supabase.auth.signOut();
+      if (!error) {
+        console.log('[Auth] Sign out successful');
+        setSession(null);
+        setUser(null);
+      }
+      return { error };
+    } catch (err) {
+      console.error('[Auth] SignOut error:', err);
       setSession(null);
       setUser(null);
+      return { error: null };
     }
-    return { error };
   }, []);
 
   const resetPassword = useCallback(async (email: string): Promise<{ error: AuthError | null }> => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    return { error };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      return { error };
+    } catch (err) {
+      console.error('[Auth] Reset password error:', err);
+      const message = err instanceof Error ? err.message : 'Network request failed';
+      return {
+        error: { message: `Connection error: ${message}`, name: 'AuthError', status: 0 } as AuthError,
+      };
+    }
   }, []);
 
   const signInWithOAuth = useCallback(async (provider: 'google' | 'apple'): Promise<{ error: Error | null }> => {
