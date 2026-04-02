@@ -61,7 +61,7 @@ function RootLayoutNav() {
       <Stack.Screen name="settings/shared-access" options={{ headerShown: false, title: 'Shared Access' }} />
       <Stack.Screen name="settings/invite-therapist" options={{ headerShown: false, title: 'Invite Therapist' }} />
       <Stack.Screen name="settings/reminders" options={{ headerShown: false, title: 'Reminders' }} />
-      <Stack.Screen name="settings/customization" options={{ headerShown: false, title: 'Customization' }} />
+      <Stack.Screen name="settings/customization" options={{ headerShown: true, title: 'Customization' }} />
     </Stack>
   );
 }
