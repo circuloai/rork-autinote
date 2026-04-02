@@ -2,8 +2,11 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+const FALLBACK_SUPABASE_URL = 'https://kedbkwjhwylctwbqdslb.supabase.co';
+const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZGJrd2pod3lsY3R3YnFkc2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzODc5NTgsImV4cCI6MjA3OTk2Mzk1OH0.6on7Nk0RU9ygoXc03hAn-8QqpgIdQeLAWGDt7AFO0cg';
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY;
 
 console.log('[Supabase] URL configured:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : '(empty)');
 console.log('[Supabase] Anon key configured:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : '(empty)');
