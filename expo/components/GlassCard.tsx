@@ -1,6 +1,14 @@
 import React from 'react';
 import { Platform, View, ViewStyle, StyleProp } from 'react-native';
-import { GlassView } from 'expo-glass-effect';
+
+let GlassView: any = null;
+if (Platform.OS === 'ios') {
+  try {
+    GlassView = require('expo-glass-effect').GlassView;
+  } catch {
+    console.warn('[GlassCard] expo-glass-effect not available');
+  }
+}
 
 type GlassCardProps = {
   children: React.ReactNode;
@@ -17,7 +25,7 @@ export default function GlassCard({
   glassEffectStyle = 'regular',
   tintColor,
 }: GlassCardProps) {
-  if (Platform.OS === 'ios') {
+  if (Platform.OS === 'ios' && GlassView) {
     return (
       <GlassView
         style={style}

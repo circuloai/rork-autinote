@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { TrendingUp, Calendar as CalendarIcon, Flame, Bell, Clock, AlertCircle, Settings as SettingsIcon } from 'lucide-react-native';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassView } from 'expo-glass-effect';
+import GlassCard from '@/components/GlassCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo, useCallback } from 'react';
 import { getColors } from '@/constants/colors';
@@ -218,7 +218,7 @@ export default function HomeScreen() {
 
         {hasReminders && (
           Platform.OS === 'ios' ? (
-            <GlassView style={styles.remindersCard} glassEffectStyle="regular">
+            <GlassCard style={styles.remindersCard} glassEffectStyle="regular" fallbackStyle={{ backgroundColor: Colors.surface }}>
             <View style={styles.reminderHeader}>
               <View style={styles.reminderTitleRow}>
                 <Bell size={20} color={Colors.text} />
@@ -272,7 +272,7 @@ export default function HomeScreen() {
             {reminders.upcoming.length === 0 && reminders.missed.length === 0 && (
               <Text style={styles.noReminders}>No reminders set for today</Text>
             )}
-            </GlassView>
+            </GlassCard>
           ) : (
             <View style={[styles.remindersCard, { backgroundColor: Colors.surface }]}>
               <View style={styles.reminderHeader}>
@@ -394,10 +394,10 @@ export default function HomeScreen() {
                   onPress={() => router.push('/calendar' as any)}
                   activeOpacity={0.8}
                 >
-                  <GlassView style={styles.glassSecondaryAction} glassEffectStyle="clear">
+                  <GlassCard style={styles.glassSecondaryAction} glassEffectStyle="clear" fallbackStyle={{ backgroundColor: Colors.surface }}>
                     <CalendarIcon size={20} color={Colors.text} />
                     <Text style={[styles.secondaryActionText, { color: Colors.text }]}>Calendar</Text>
-                  </GlassView>
+                  </GlassCard>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -405,10 +405,10 @@ export default function HomeScreen() {
                   onPress={() => router.push('/(tabs)/insights' as any)}
                   activeOpacity={0.8}
                 >
-                  <GlassView style={styles.glassSecondaryAction} glassEffectStyle="clear">
+                  <GlassCard style={styles.glassSecondaryAction} glassEffectStyle="clear" fallbackStyle={{ backgroundColor: Colors.surface }}>
                     <TrendingUp size={20} color={Colors.text} />
                     <Text style={[styles.secondaryActionText, { color: Colors.text }]}>Insights</Text>
-                  </GlassView>
+                  </GlassCard>
                 </TouchableOpacity>
               </>
             ) : (
