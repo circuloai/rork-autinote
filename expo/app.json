@@ -48,8 +48,6 @@
       "checkAutomatically": "ALWAYS",
       "fallbackToCacheTimeout": 0,
       "useEmbeddedUpdate": true,
-      "codeSigningCertificate": "<UNKNOWN>",
-      "codeSigningMetadata": "<UNKNOWN>",
       "assetPatternsToBeBundled": [],
       "disableAntiBrickingMeasures": false
     },
