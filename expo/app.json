@@ -16,7 +16,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.i3iytomcfmnnh5v3rdwxs"
+      "bundleIdentifier": "app.rork.autinote"
     },
     "android": {
       "adaptiveIcon": {
