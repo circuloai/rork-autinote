@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { UserProfile, LogEntry, Preferences, SharedAccess, TherapistNote, DailyLogEntry, MeltdownLogEntry, AnyLogEntry, ChatMessage } from '@/types';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEYS = {
@@ -25,8 +25,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryFn: async () => {
       console.log('[AppContext] Fetching profile for user:', user?.id);
       try {
-        if (!user) {
-          console.log('[AppContext] No user, checking AsyncStorage...');
+        if (!user || !isSupabaseConfigured) {
+          console.log('[AppContext] No user or Supabase not configured, checking AsyncStorage...');
           const stored = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
           return stored ? JSON.parse(stored) as UserProfile : null;
         }
@@ -87,7 +87,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryKey: ['logEntries', user?.id, profileQuery.data?.children?.length],
     queryFn: async () => {
       try {
-        if (!user || !profileQuery.data?.children) {
+        if (!user || !isSupabaseConfigured || !profileQuery.data?.children) {
           const stored = await AsyncStorage.getItem(STORAGE_KEYS.LOG_ENTRIES);
           return stored ? JSON.parse(stored) as LogEntry[] : [];
         }
@@ -162,7 +162,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryFn: async () => {
       console.log('[AppContext] Fetching preferences for user:', user?.id);
       try {
-        if (!user) {
+        if (!user || !isSupabaseConfigured) {
           const stored = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
           return stored ? JSON.parse(stored) as Preferences : {
             theme: 'light' as const,

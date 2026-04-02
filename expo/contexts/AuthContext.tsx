@@ -1,5 +1,5 @@
 import createContextHook from '@nkzw/create-context-hook';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
@@ -17,6 +17,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     let subscription: any = null;
 
     const initAuth = async () => {
+      if (!isSupabaseConfigured) {
+        console.warn('[Auth] Supabase not configured, skipping auth initialization');
+        setSession(null);
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
