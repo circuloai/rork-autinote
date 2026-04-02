@@ -42,8 +42,7 @@
       "typedRoutes": true
     },
     "updates": {
-      "enabled": false,
-    },
-    "runtimeVersion": "<UNKNOWN>"
+      "enabled": false
+    }
   }
 }
