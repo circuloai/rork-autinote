@@ -114,61 +114,114 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       console.log(`[Auth] Starting ${provider} OAuth...`);
       
       const redirectUrl = Platform.OS === 'web'
-        ? window.location.origin + window.location.pathname
+        ? window.location.origin
         : Linking.createURL('/');
       console.log('[Auth] Redirect URL:', redirectUrl);
 
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        console.error(`[Auth] ${provider} OAuth error:`, error);
+        return { error };
+      }
+
+      if (!data?.url) {
+        return { error: new Error(`Could not get ${provider} login URL. Please check that ${provider} OAuth is configured in your Supabase project.`) };
+      }
+
       if (Platform.OS === 'web') {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider,
-          options: {
-            redirectTo: redirectUrl,
-          },
-        });
-
-        if (error) {
-          console.error(`[Auth] ${provider} OAuth error:`, error);
-          return { error };
+        const authWindow = window.open(data.url, '_blank', 'width=500,height=700,menubar=no,toolbar=no');
+        
+        if (!authWindow) {
+          window.location.href = data.url;
+          return { error: null };
         }
 
-        return { error: null };
-      } else {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider,
-          options: {
-            redirectTo: redirectUrl,
-            skipBrowserRedirect: true,
-          },
-        });
-
-        if (error) {
-          console.error(`[Auth] ${provider} OAuth error:`, error);
-          return { error };
-        }
-
-        if (data?.url) {
-          const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-          console.log('[Auth] WebBrowser result:', result.type);
-
-          if (result.type === 'success' && result.url) {
-            const url = new URL(result.url);
-            const params = new URLSearchParams(url.hash.substring(1));
-            const accessToken = params.get('access_token');
-            const refreshToken = params.get('refresh_token');
-
-            if (accessToken && refreshToken) {
-              const { error: sessionError } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              });
-              if (sessionError) {
-                console.error('[Auth] Session set error:', sessionError);
-                return { error: sessionError };
+        return new Promise<{ error: Error | null }>((resolve) => {
+          const checkInterval = setInterval(() => {
+            try {
+              if (authWindow.closed) {
+                clearInterval(checkInterval);
+                void supabase.auth.getSession().then(({ data: sessionData }) => {
+                  if (sessionData.session) {
+                    console.log('[Auth] OAuth session detected after popup closed');
+                    resolve({ error: null });
+                  } else {
+                    resolve({ error: new Error('Authentication was cancelled') });
+                  }
+                });
+                return;
               }
+
+              const popupUrl = authWindow.location?.href;
+              if (popupUrl && popupUrl.startsWith(redirectUrl)) {
+                clearInterval(checkInterval);
+                
+                const url = new URL(popupUrl);
+                const hashParams = new URLSearchParams(url.hash.substring(1));
+                const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
+                
+                authWindow.close();
+
+                if (accessToken && refreshToken) {
+                  void supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                  }).then(({ error: sessionError }) => {
+                    if (sessionError) {
+                      console.error('[Auth] Session set error:', sessionError);
+                      resolve({ error: sessionError });
+                    } else {
+                      console.log('[Auth] OAuth session set successfully');
+                      resolve({ error: null });
+                    }
+                  });
+                } else {
+                  resolve({ error: new Error('No tokens received from authentication') });
+                }
+              }
+            } catch {
+              // Cross-origin access error is expected while on the OAuth provider's page
             }
-          } else if (result.type === 'cancel' || result.type === 'dismiss') {
-            return { error: new Error('Authentication was cancelled') };
+          }, 500);
+
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            if (!authWindow.closed) {
+              authWindow.close();
+            }
+            resolve({ error: new Error('Authentication timed out') });
+          }, 120000);
+        });
+      } else {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        console.log('[Auth] WebBrowser result:', result.type);
+
+        if (result.type === 'success' && result.url) {
+          const url = new URL(result.url);
+          const params = new URLSearchParams(url.hash.substring(1));
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (sessionError) {
+              console.error('[Auth] Session set error:', sessionError);
+              return { error: sessionError };
+            }
           }
+        } else if (result.type === 'cancel' || result.type === 'dismiss') {
+          return { error: new Error('Authentication was cancelled') };
         }
 
         return { error: null };
