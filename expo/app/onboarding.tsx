@@ -27,6 +27,7 @@ export default function OnboardingScreen() {
   const { signUp, signInWithOAuth } = useAuth();
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
   
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   
@@ -84,7 +85,8 @@ export default function OnboardingScreen() {
           Alert.alert('Sign Up Error', error.message);
         }
       } else {
-        router.replace('/(tabs)/home' as any);
+        setIsOAuthUser(true);
+        setStep(2);
       }
     } catch {
       Alert.alert('Error', 'An unexpected error occurred');
@@ -107,8 +109,7 @@ export default function OnboardingScreen() {
 
   const isStep1Valid = caregiverName.trim().length > 0 && 
                        caregiverEmail.trim().length > 0 && 
-                       caregiverPassword.trim().length > 0 && 
-                       caregiverPhone.trim().length > 0;
+                       caregiverPassword.trim().length > 0;
 
   const isStep2Valid = childName.trim().length > 0 && childAge.trim().length > 0;
 
@@ -193,59 +194,79 @@ export default function OnboardingScreen() {
   const handleComplete = async () => {
     setIsCreatingAccount(true);
     try {
-      console.log('[Onboarding] Starting signup process...');
-      const { error, user, session, needsEmailConfirmation } = await signUp(caregiverEmail.trim(), caregiverPassword);
-      
-      if (error) {
-        // Check if user already exists
-        if (error.message.includes('already registered')) {
-          Alert.alert(
-            'Account Exists',
-            'An account with this email already exists. Please log in instead.',
-            [{ text: 'Go to Login', onPress: () => router.push('/login' as any) }]
-          );
-        } else {
-          Alert.alert('Sign Up Error', error.message);
+      let userId: string | null = null;
+
+      if (isOAuthUser) {
+        console.log('[Onboarding] OAuth user, retrieving session...');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        userId = currentSession?.user?.id ?? null;
+
+        if (!userId) {
+          let attempts = 0;
+          const maxAttempts = 20;
+          while (attempts < maxAttempts && !userId) {
+            await new Promise(resolve => setTimeout(resolve, 250));
+            const { data: { session: retrySession } } = await supabase.auth.getSession();
+            userId = retrySession?.user?.id ?? null;
+            attempts++;
+            console.log(`[Onboarding] Checking OAuth session attempt ${attempts}, userId: ${userId}`);
+          }
         }
-        setIsCreatingAccount(false);
-        return;
-      }
 
-      // If email confirmation is required, inform the user
-      if (needsEmailConfirmation) {
-        console.log('[Onboarding] Email confirmation required, user created:', user?.id);
-        Alert.alert(
-          'Check Your Email',
-          'We\'ve sent a confirmation link to your email. Please confirm your email and then log in.',
-          [{ text: 'OK', onPress: () => router.push('/login' as any) }]
-        );
-        setIsCreatingAccount(false);
-        return;
-      }
-
-      console.log('[Onboarding] Signup successful with immediate session');
-      
-      // Use the user ID from the signup response if available
-      let userId = user?.id ?? session?.user?.id ?? null;
-      
-      // If no immediate user ID, wait for session
-      if (!userId) {
-        let attempts = 0;
-        const maxAttempts = 20;
+        if (!userId) {
+          Alert.alert('Error', 'Failed to retrieve your account. Please try again.');
+          setIsCreatingAccount(false);
+          return;
+        }
+      } else {
+        console.log('[Onboarding] Starting signup process...');
+        const { error, user, session, needsEmailConfirmation } = await signUp(caregiverEmail.trim(), caregiverPassword);
         
-        while (attempts < maxAttempts && !userId) {
-          await new Promise(resolve => setTimeout(resolve, 250));
-          const { data: { session: currentSession } } = await supabase.auth.getSession();
-          userId = currentSession?.user?.id ?? null;
-          attempts++;
-          console.log(`[Onboarding] Checking session attempt ${attempts}, userId: ${userId}`);
+        if (error) {
+          if (error.message.includes('already registered')) {
+            Alert.alert(
+              'Account Exists',
+              'An account with this email already exists. Please log in instead.',
+              [{ text: 'Go to Login', onPress: () => router.push('/login' as any) }]
+            );
+          } else {
+            Alert.alert('Sign Up Error', error.message);
+          }
+          setIsCreatingAccount(false);
+          return;
         }
-      }
 
-      if (!userId) {
-        Alert.alert('Error', 'Failed to establish session. Please try logging in.');
-        setIsCreatingAccount(false);
-        return;
+        if (needsEmailConfirmation) {
+          console.log('[Onboarding] Email confirmation required, user created:', user?.id);
+          Alert.alert(
+            'Check Your Email',
+            'We\'ve sent a confirmation link to your email. Please confirm your email and then log in.',
+            [{ text: 'OK', onPress: () => router.push('/login' as any) }]
+          );
+          setIsCreatingAccount(false);
+          return;
+        }
+
+        console.log('[Onboarding] Signup successful with immediate session');
+        userId = user?.id ?? session?.user?.id ?? null;
+        
+        if (!userId) {
+          let attempts = 0;
+          const maxAttempts = 20;
+          while (attempts < maxAttempts && !userId) {
+            await new Promise(resolve => setTimeout(resolve, 250));
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            userId = currentSession?.user?.id ?? null;
+            attempts++;
+            console.log(`[Onboarding] Checking session attempt ${attempts}, userId: ${userId}`);
+          }
+        }
+
+        if (!userId) {
+          Alert.alert('Error', 'Failed to establish session. Please try logging in.');
+          setIsCreatingAccount(false);
+          return;
+        }
       }
 
       console.log('[Onboarding] Session established, saving profile to Supabase...');
@@ -257,9 +278,9 @@ export default function OnboardingScreen() {
         .insert({
           user_id: userId,
           role: selectedRole,
-          caregiver_name: caregiverName,
-          caregiver_email: caregiverEmail,
-          caregiver_phone: caregiverPhone,
+          caregiver_name: isOAuthUser ? null : caregiverName,
+          caregiver_email: isOAuthUser ? null : caregiverEmail,
+          caregiver_phone: isOAuthUser ? null : (caregiverPhone || null),
           therapist_phone: therapistPhone || null,
           is_explore_mode: false,
         })
@@ -372,7 +393,7 @@ export default function OnboardingScreen() {
 
           {step < 5 && (
             <View style={styles.stepIndicator}>
-              <View style={[styles.stepDot, step === 1 && styles.stepDotActive]} />
+              {!isOAuthUser && <View style={[styles.stepDot, step === 1 && styles.stepDotActive]} />}
               <View style={[styles.stepDot, step === 2 && styles.stepDotActive]} />
               <View style={[styles.stepDot, step === 3 && styles.stepDotActive]} />
               <View style={[styles.stepDot, step === 4 && styles.stepDotActive]} />
@@ -433,7 +454,7 @@ export default function OnboardingScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Therapist/Pediatrician Number</Text>
+                <Text style={styles.label}>Therapist/Pediatrician Number (Optional)</Text>
                 <TextInput
                   style={styles.input}
                   value={therapistPhone}
@@ -1014,7 +1035,7 @@ export default function OnboardingScreen() {
 
           {step < 5 && (
             <View style={styles.buttonContainer}>
-              {step > 1 && (
+              {step > 1 && !(isOAuthUser && step === 2) && (
                 <TouchableOpacity
                   style={styles.backButton}
                   onPress={() => setStep((step - 1) as 1 | 2 | 3 | 4)}
