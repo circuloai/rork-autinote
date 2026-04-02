@@ -6,6 +6,28 @@ import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import type { QuickReminder, CustomReminder, ReminderCategory, ReminderTone, ReminderRepeat } from '@/types';
 
+function formatTo12h(time24: string): string {
+  const [hourStr, minuteStr] = time24.split(':');
+  let hour = parseInt(hourStr, 10);
+  const minute = minuteStr || '00';
+  if (isNaN(hour)) return time24;
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${hour}:${minute} ${ampm}`;
+}
+
+function parseTo24h(time12: string): string {
+  const match = time12.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return time12;
+  let hour = parseInt(match[1], 10);
+  const minute = match[2];
+  const period = match[3].toUpperCase();
+  if (period === 'AM' && hour === 12) hour = 0;
+  if (period === 'PM' && hour !== 12) hour += 12;
+  return `${hour.toString().padStart(2, '0')}:${minute}`;
+}
+
 export default function RemindersSettingsScreen() {
   const router = useRouter();
   const { preferences, savePreferences } = useApp();
@@ -26,7 +48,7 @@ export default function RemindersSettingsScreen() {
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [newReminderLabel, setNewReminderLabel] = useState('');
   const [newReminderCategory, setNewReminderCategory] = useState<ReminderCategory>('mood');
-  const [newReminderTime, setNewReminderTime] = useState('09:00');
+  const [newReminderTime, setNewReminderTime] = useState('9:00 AM');
   const [newReminderRepeat, setNewReminderRepeat] = useState<ReminderRepeat>('daily');
   const [newReminderTone, setNewReminderTone] = useState<ReminderTone>('chime');
   const [newReminderMessage, setNewReminderMessage] = useState('Would you like to log today notes?');
@@ -46,9 +68,10 @@ export default function RemindersSettingsScreen() {
     ));
   };
 
-  const updateQuickReminderTime = (id: string, time: string) => {
+  const updateQuickReminderTime = (id: string, displayTime: string) => {
+    const stored = parseTo24h(displayTime);
     setQuickReminders(prev => prev.map(r => 
-      r.id === id ? { ...r, time } : r
+      r.id === id ? { ...r, time: stored } : r
     ));
   };
 
@@ -59,7 +82,7 @@ export default function RemindersSettingsScreen() {
       id: Date.now().toString(),
       label: newReminderLabel,
       category: newReminderCategory,
-      time: newReminderTime,
+      time: parseTo24h(newReminderTime),
       repeat: newReminderRepeat,
       tone: newReminderTone,
       message: newReminderMessage,
@@ -69,6 +92,7 @@ export default function RemindersSettingsScreen() {
     setCustomReminders(prev => [...prev, reminder]);
     setShowReminderModal(false);
     setNewReminderLabel('');
+    setNewReminderTime('9:00 AM');
     setNewReminderMessage('Would you like to log today notes?');
   };
 
@@ -158,11 +182,11 @@ export default function RemindersSettingsScreen() {
                     <Clock size={16} color={Colors.textSecondary} />
                     <TextInput
                       style={styles.timeInput}
-                      value={reminder.time}
+                      value={formatTo12h(reminder.time ?? '')}
                       onChangeText={(text) => updateQuickReminderTime(reminder.id, text)}
-                      placeholder="HH:MM"
+                      placeholder="12:00 AM"
                       placeholderTextColor={Colors.textLight}
-                      keyboardType="numbers-and-punctuation"
+                      keyboardType="default"
                     />
                   </View>
                 )}
@@ -194,7 +218,7 @@ export default function RemindersSettingsScreen() {
                     <View style={styles.customReminderInfo}>
                       <Text style={styles.customReminderLabel}>{reminder.label}</Text>
                       <Text style={styles.customReminderTime}>
-                        {reminder.time} • {reminder.repeat} • {reminder.category}
+                        {formatTo12h(reminder.time)} • {reminder.repeat} • {reminder.category}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -307,9 +331,9 @@ export default function RemindersSettingsScreen() {
                 style={styles.input}
                 value={newReminderTime}
                 onChangeText={setNewReminderTime}
-                placeholder="HH:MM"
+                placeholder="12:00 AM"
                 placeholderTextColor={Colors.textLight}
-                keyboardType="numbers-and-punctuation"
+                keyboardType="default"
               />
             </View>
 
