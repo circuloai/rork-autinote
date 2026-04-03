@@ -4,7 +4,6 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LogBox, View, ActivityIndicator, StyleSheet, Text, Platform } from "react-native";
-import * as Updates from "expo-updates";
 import { AppProvider } from "@/contexts/AppContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 
@@ -73,16 +72,9 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        console.log("[updates] runtimeVersion:", (Updates as any)?.runtimeVersion);
-        console.log("[updates] channel:", (Updates as any)?.channel);
-        console.log("[updates] updateId:", (Updates as any)?.updateId);
-        console.log("[updates] isEmbeddedLaunch:", (Updates as any)?.isEmbeddedLaunch);
-        console.log("[updates] isEnabled:", (Updates as any)?.isEnabled);
-        console.log("[updates] platform:", Platform.OS);
+        console.log("[init] platform:", Platform.OS);
 
         await new Promise((resolve) => setTimeout(resolve, 100));
-
-        console.log("[updates] OTA updates disabled");
 
         setAppIsReady(true);
       } catch (e) {
