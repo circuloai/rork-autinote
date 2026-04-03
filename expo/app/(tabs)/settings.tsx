@@ -1,8 +1,7 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { ChevronRight, User, Bell, Palette, BookOpen, TrendingUp, Bot, Lock, BookMarked, Info, LogOut, TestTube, Users, RefreshCw } from 'lucide-react-native';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Platform, ActivityIndicator } from 'react-native';
-import * as Updates from 'expo-updates';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getColors } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -22,47 +21,8 @@ export default function SettingsScreen() {
   const Colors = useMemo(() => getColors(preferences), [preferences]);
   const styles = useMemo(() => createStyles(Colors), [Colors]);
 
-  const [isCheckingUpdates, setIsCheckingUpdates] = useState<boolean>(false);
-
-  const handleCheckForUpdates = useCallback(async () => {
-    if (Platform.OS === 'web') {
-      Alert.alert('Updates', 'Updates are not supported on web previews.');
-      return;
-    }
-
-    if (!(Updates as any)?.isEnabled) {
-      Alert.alert('Updates', 'Updates are not enabled for this build.');
-      return;
-    }
-
-    setIsCheckingUpdates(true);
-    try {
-      console.log('[updates] manual check started');
-      console.log('[updates] runtimeVersion:', (Updates as any)?.runtimeVersion);
-      console.log('[updates] channel:', (Updates as any)?.channel);
-      console.log('[updates] updateId:', (Updates as any)?.updateId);
-      console.log('[updates] isEmbeddedLaunch:', (Updates as any)?.isEmbeddedLaunch);
-
-      const result = await Updates.checkForUpdateAsync();
-      console.log('[updates] manual check result:', result);
-
-      if (!result.isAvailable) {
-        Alert.alert('Up to date', 'This device is already on the latest update.');
-        return;
-      }
-
-      Alert.alert('Update available', 'Downloading the latest update now…');
-      const fetched = await Updates.fetchUpdateAsync();
-      console.log('[updates] manual fetch result:', fetched);
-
-      Alert.alert('Update ready', 'Restarting to apply the update…');
-      await Updates.reloadAsync();
-    } catch (e) {
-      console.error('[updates] manual check failed:', e);
-      Alert.alert('Update check failed', 'Please try again on a stable connection.');
-    } finally {
-      setIsCheckingUpdates(false);
-    }
+  const handleCheckForUpdates = useCallback(() => {
+    Alert.alert('Updates', 'Update checking is not available in this build. Please check your app store for the latest version.');
   }, []);
 
   const handleLogout = () => {
@@ -89,11 +49,7 @@ export default function SettingsScreen() {
       title: 'Updates',
       items: [
         {
-          icon: isCheckingUpdates ? (
-            <ActivityIndicator size="small" color={Colors.text} />
-          ) : (
-            <RefreshCw size={24} color={Colors.text} />
-          ),
+          icon: <RefreshCw size={24} color={Colors.text} />,
           title: 'Check for Updates',
           subtitle:
             Platform.OS === 'web'
