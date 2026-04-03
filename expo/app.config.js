@@ -1,44 +1,37 @@
+// Aggressively remove any code signing env vars before anything else
 delete process.env.EXPO_UPDATES_CODE_SIGNING_CERTIFICATE;
 delete process.env.EXPO_UPDATES_CODE_SIGNING_METADATA;
+delete process.env.CODE_SIGNING_CERTIFICATE;
 
-const { withDangerousMod } = require("expo/config-plugins");
+const { withInfoPlist } = require("expo/config-plugins");
 
-const config = require("./app.json");
+const baseConfig = require("./app.json");
 
-function withDisableCodeSigning(config) {
-  return withDangerousMod(config, [
-    "ios",
-    (config) => {
-      if (config.updates) {
-        delete config.updates.codeSigningCertificate;
-        delete config.updates.codeSigningMetadata;
-        config.updates.enabled = false;
-      }
-      delete config.runtimeVersion;
-      return config;
-    },
-  ]);
+function withCleanUpdates(config) {
+  return withInfoPlist(config, (mod) => {
+    if (mod.modResults) {
+      delete mod.modResults.EXUpdatesCodeSigningCertificate;
+      delete mod.modResults.EXUpdatesCodeSigningMetadata;
+      mod.modResults.EXUpdatesEnabled = false;
+    }
+    return mod;
+  });
 }
 
 module.exports = ({ config: expoConfig }) => {
-  const merged = { ...config.expo, ...expoConfig };
+  const merged = { ...baseConfig.expo, ...expoConfig };
 
-  // Force disable updates and remove any code signing references
-  if (merged.updates) {
-    delete merged.updates.codeSigningCertificate;
-    delete merged.updates.codeSigningMetadata;
-    merged.updates.enabled = false;
-  } else {
-    merged.updates = { enabled: false };
-  }
-
+  // Completely remove updates-related fields
+  merged.updates = { enabled: false };
   delete merged.runtimeVersion;
 
-  // Add the config plugin to clean up at the plugin stage
+  // Ensure plugins array exists
   if (!merged.plugins) {
     merged.plugins = [];
   }
-  merged.plugins.push(withDisableCodeSigning);
+
+  // Add our cleanup plugin
+  merged.plugins.push(withCleanUpdates);
 
   return merged;
 };
