@@ -1,15 +1,27 @@
 const baseConfig = require("./app.json");
 
 module.exports = ({ config }) => {
-  const configWithoutUpdates = { ...baseConfig.expo };
-  
-  // Remove updates-related fields that might have been added by eas init
-  delete configWithoutUpdates.updates;
-  delete configWithoutUpdates.runtimeVersion;
-  delete configWithoutUpdates.extra?.eas;
-  
-  return {
-    ...configWithoutUpdates,
+  // Start with base config
+  const finalConfig = {
+    ...baseConfig.expo,
     ...config
   };
+
+  // Explicitly remove all updates-related fields
+  delete finalConfig.updates;
+  delete finalConfig.runtimeVersion;
+  if (finalConfig.extra?.eas) {
+    delete finalConfig.extra.eas;
+  }
+
+  // Ensure iOS config is set
+  finalConfig.ios = {
+    ...finalConfig.ios,
+    infoPlist: {
+      ...(finalConfig.ios?.infoPlist || {}),
+      ITSAppUsesNonExemptEncryption: false
+    }
+  };
+
+  return finalConfig;
 };
