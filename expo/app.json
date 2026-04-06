@@ -40,6 +40,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2517463a-f506-4364-9822-2e5ca9a2aae7"
     }
   }
 }
