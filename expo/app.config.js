@@ -1,15 +1,20 @@
 module.exports = ({ config }) => {
-  const { updates: _updates, runtimeVersion: _runtimeVersion, ...cleanConfig } = config;
+  const finalConfig = { ...config };
 
-  const finalConfig = {
-    ...cleanConfig,
-  };
-
-  delete finalConfig.updates;
   delete finalConfig.runtimeVersion;
+
+  if (finalConfig.updates) {
+    delete finalConfig.updates.codeSigningCertificate;
+    delete finalConfig.updates.codeSigningMetadata;
+  }
 
   if (finalConfig.extra?.eas) {
     delete finalConfig.extra.eas;
+  }
+
+  if (finalConfig.extra) {
+    delete finalConfig.extra.updates;
+    delete finalConfig.extra.runtimeVersion;
   }
 
   finalConfig.updates = {
@@ -23,6 +28,12 @@ module.exports = ({ config }) => {
       ITSAppUsesNonExemptEncryption: false,
     },
   };
+
+  const existingPlugins = finalConfig.plugins || [];
+  finalConfig.plugins = [
+    ...existingPlugins,
+    "./plugins/strip-code-signing",
+  ];
 
   return finalConfig;
 };
