@@ -1,26 +1,20 @@
-const baseConfig = require("./app.json");
-
 module.exports = ({ config }) => {
-  // Start with base config
+  const { updates: _updates, runtimeVersion: _runtimeVersion, ...cleanConfig } = config;
+
   const finalConfig = {
-    ...baseConfig.expo,
-    ...config
+    ...cleanConfig,
   };
 
-  // Explicitly remove all updates-related fields
-  delete finalConfig.updates;
-  delete finalConfig.runtimeVersion;
   if (finalConfig.extra?.eas) {
     delete finalConfig.extra.eas;
   }
 
-  // Ensure iOS config is set
   finalConfig.ios = {
     ...finalConfig.ios,
     infoPlist: {
       ...(finalConfig.ios?.infoPlist || {}),
-      ITSAppUsesNonExemptEncryption: false
-    }
+      ITSAppUsesNonExemptEncryption: false,
+    },
   };
 
   return finalConfig;
