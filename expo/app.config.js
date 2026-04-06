@@ -1,38 +1,32 @@
 module.exports = ({ config }) => {
-  const finalConfig = JSON.parse(JSON.stringify(config));
+  const {
+    runtimeVersion: _runtimeVersion,
+    updates: _updates,
+    codeSigningCertificate: _codeSigningCertificate,
+    codeSigningMetadata: _codeSigningMetadata,
+    ...cleanConfig
+  } = JSON.parse(JSON.stringify(config));
 
-  delete finalConfig.runtimeVersion;
+  if (cleanConfig.extra) {
+    delete cleanConfig.extra.eas;
+    delete cleanConfig.extra.updates;
+    delete cleanConfig.extra.runtimeVersion;
+    if (Object.keys(cleanConfig.extra).length === 0) {
+      delete cleanConfig.extra;
+    }
+  }
 
-  finalConfig.updates = {
+  cleanConfig.updates = {
     enabled: false,
   };
 
-  if (finalConfig.extra) {
-    delete finalConfig.extra.eas;
-    delete finalConfig.extra.updates;
-    delete finalConfig.extra.runtimeVersion;
-  }
-
-  delete finalConfig.codeSigningCertificate;
-  delete finalConfig.codeSigningMetadata;
-
-  if (finalConfig.updates) {
-    delete finalConfig.updates.codeSigningCertificate;
-    delete finalConfig.updates.codeSigningMetadata;
-    delete finalConfig.updates.url;
-    delete finalConfig.updates.requestHeaders;
-    finalConfig.updates = {
-      enabled: false,
-    };
-  }
-
-  finalConfig.ios = {
-    ...finalConfig.ios,
+  cleanConfig.ios = {
+    ...cleanConfig.ios,
     infoPlist: {
-      ...(finalConfig.ios?.infoPlist || {}),
+      ...(cleanConfig.ios?.infoPlist || {}),
       ITSAppUsesNonExemptEncryption: false,
     },
   };
 
-  return finalConfig;
+  return cleanConfig;
 };
