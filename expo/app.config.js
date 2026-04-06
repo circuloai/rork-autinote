@@ -13,6 +13,19 @@ module.exports = ({ config }) => {
     delete finalConfig.extra.runtimeVersion;
   }
 
+  delete finalConfig.codeSigningCertificate;
+  delete finalConfig.codeSigningMetadata;
+
+  if (finalConfig.updates) {
+    delete finalConfig.updates.codeSigningCertificate;
+    delete finalConfig.updates.codeSigningMetadata;
+    delete finalConfig.updates.url;
+    delete finalConfig.updates.requestHeaders;
+    finalConfig.updates = {
+      enabled: false,
+    };
+  }
+
   finalConfig.ios = {
     ...finalConfig.ios,
     infoPlist: {
