@@ -5,9 +5,16 @@ module.exports = ({ config }) => {
     ...cleanConfig,
   };
 
+  delete finalConfig.updates;
+  delete finalConfig.runtimeVersion;
+
   if (finalConfig.extra?.eas) {
     delete finalConfig.extra.eas;
   }
+
+  finalConfig.updates = {
+    enabled: false,
+  };
 
   finalConfig.ios = {
     ...finalConfig.ios,
