@@ -7,6 +7,10 @@ module.exports = ({ config }) => {
     ...cleanConfig
   } = JSON.parse(JSON.stringify(config));
 
+  delete cleanConfig.runtimeVersion;
+  delete cleanConfig.codeSigningCertificate;
+  delete cleanConfig.codeSigningMetadata;
+
   if (cleanConfig.extra) {
     delete cleanConfig.extra.eas;
     delete cleanConfig.extra.updates;
